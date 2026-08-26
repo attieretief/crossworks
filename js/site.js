@@ -21,3 +21,51 @@ document.querySelectorAll('[data-copy]').forEach(el => {
     } catch (_) {}
   });
 });
+
+/* ── motion ─────────────────────────────────────────────────────────────── */
+const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* header condenses once you leave the hero */
+const header = document.querySelector('.site-header');
+const onScroll = () => header.classList.toggle('scrolled', window.scrollY > 60);
+addEventListener('scroll', onScroll, { passive: true });
+onScroll();
+
+/* reveal on scroll — staggered per group, no markup changes needed */
+if (!reduced && 'IntersectionObserver' in window) {
+  const groups = [
+    '.section .overline', '.section h2', '.section .body-lg',
+    '.pillar', '.country', '.card', '.grid-gallery img',
+    '.bank', '.contacts > div', '.verse.small'
+  ];
+  const seen = new Set();
+  groups.forEach(sel => document.querySelectorAll(sel).forEach(el => {
+    if (seen.has(el) || el.closest('.hero')) return;
+    seen.add(el);
+    el.setAttribute('data-reveal', '');
+  }));
+
+  let fired = false;
+  const io = new IntersectionObserver((entries, obs) => {
+    fired = true;
+    entries.forEach(entry => {
+      if (!entry.isIntersecting) return;
+      const el = entry.target;
+      const peers = [...el.parentElement.children].filter(n => n.hasAttribute('data-reveal'));
+      const step = Math.min(peers.indexOf(el), 5);
+      el.style.transitionDelay = (step * 0.13) + 's';
+      el.classList.add('in');
+      el.addEventListener('transitionend', () => el.classList.add('done'), { once: true });
+      obs.unobserve(el);
+    });
+  }, { rootMargin: '0px 0px -14% 0px', threshold: 0.05 });
+
+  seen.forEach(el => io.observe(el));
+
+  /* fail-safe: if the observer never runs, show everything rather than hide the page */
+  setTimeout(() => {
+    if (fired) return;
+    io.disconnect();
+    seen.forEach(el => el.classList.add('in'));
+  }, 2500);
+}

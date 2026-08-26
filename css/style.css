@@ -96,8 +96,9 @@ h2{font-size:clamp(30px,4.4vw,50px)}
 
 /* gallery */
 .grid-gallery{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:44px}
-.grid-gallery img{width:100%;height:210px;object-fit:cover;filter:saturate(.95);transition:.25s}
-.grid-gallery img:hover{filter:saturate(1.1);transform:scale(1.015)}
+.grid-gallery img{width:100%;height:210px;object-fit:cover;filter:saturate(.9) brightness(.94);
+  position:relative;z-index:1;transition:transform .5s cubic-bezier(.33,1,.68,1),filter .5s ease}
+.grid-gallery img:hover{filter:saturate(1.15) brightness(1.04);transform:scale(1.07);z-index:2}
 
 /* give */
 .bank{background:#fff;border:1px solid rgba(103,93,80,.18);padding:32px;margin-top:44px;box-shadow:0 18px 40px -30px rgba(36,31,25,.5)}
@@ -141,4 +142,61 @@ h2{font-size:clamp(30px,4.4vw,50px)}
   .card-wide img{width:100%;min-height:0;height:250px}
   .section{padding:70px 0}
   .contacts{gap:32px}
+}
+
+/* ── motion ─────────────────────────────────────────────────────────────── */
+
+/* header condenses once you leave the hero */
+.site-header{transition:padding .3s ease,background .3s ease,border-color .3s ease}
+.site-header.scrolled{padding:8px 28px;background:rgba(36,31,25,.94);border-bottom-color:rgba(230,175,14,.32)}
+.brand img{transition:transform .3s ease}
+.site-header.scrolled .brand img{transform:scale(.86)}
+
+/* nav underline */
+.nav a:not(.btn){position:relative}
+.nav a:not(.btn)::after{content:"";position:absolute;left:0;right:0;bottom:-5px;height:2px;background:var(--gold);
+  transform:scaleX(0);transform-origin:left;transition:transform .25s ease}
+.nav a:not(.btn):hover::after{transform:scaleX(1)}
+
+/* hero: slow drift on the photo, staggered entrance on the copy */
+.hero-img{animation:drift 28s cubic-bezier(.33,1,.68,1) forwards;transform-origin:52% 45%;will-change:transform}
+@keyframes drift{from{transform:scale(1.14)}to{transform:scale(1)}}
+.hero-inner>*{animation:rise 1.05s cubic-bezier(.33,1,.68,1) both}
+.hero-inner>.overline{animation-delay:.15s}
+.hero-inner>h1{animation:heroTitle 1.25s cubic-bezier(.33,1,.68,1) .25s both}
+.hero-inner>.lead{animation-delay:.5s}
+.hero-inner>.verse{animation-delay:.68s}
+.hero-inner>.hero-actions{animation-delay:.86s}
+@keyframes rise{from{opacity:0;transform:translateY(38px)}to{opacity:1;transform:none}}
+@keyframes heroTitle{from{opacity:0;transform:translateY(52px) scale(.94)}to{opacity:1;transform:none}}
+
+/* the gold rule above each country draws itself in */
+.country{position:relative}
+.country::after{content:"";position:absolute;left:0;bottom:-1px;height:2px;width:100%;background:var(--gold);
+  transform:scaleX(0);transform-origin:left;transition:transform 1s cubic-bezier(.33,1,.68,1) .15s}
+.country.in::after{transform:scaleX(1)}
+
+/* scroll reveal (class applied by js/site.js) */
+[data-reveal]{opacity:0;transform:translateY(44px) scale(.975);will-change:opacity,transform;
+  transition:opacity .95s cubic-bezier(.33,1,.68,1),transform .95s cubic-bezier(.33,1,.68,1)}
+[data-reveal].in{opacity:1;transform:none}
+[data-reveal].done{will-change:auto}
+
+/* hover lift */
+.card{transition:transform .45s cubic-bezier(.33,1,.68,1),box-shadow .45s ease}
+.card:not(.card-plain):hover{transform:translateY(-10px);box-shadow:0 34px 54px -26px rgba(0,0,0,.9)}
+.card img{transition:transform .6s cubic-bezier(.33,1,.68,1)}
+.card:hover img{transform:scale(1.08)}
+.card-plain{transition:transform .3s cubic-bezier(.33,1,.68,1),border-color .3s ease}
+.card-plain:hover{transform:translateX(8px);border-left-color:#fff}
+.pillar{transition:border-color .3s ease,transform .3s cubic-bezier(.33,1,.68,1)}
+.pillar:hover{border-top-color:var(--gold-dark);transform:translateY(-6px)}
+.btn-gold:hover,.btn-outline:hover,.btn-ghost:hover{transform:translateY(-4px)}
+.btn{transition:background .18s ease,color .18s ease,border-color .18s ease,transform .18s ease}
+.bank dd[data-copy]{transition:color .2s ease}
+
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{animation:none !important;transition:none !important}
+  [data-reveal]{opacity:1 !important;transform:none !important}
 }
