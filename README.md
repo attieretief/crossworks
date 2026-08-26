@@ -1,7 +1,7 @@
 # Crossworks
 
 Single-page site for Crossworks Trust (PBO, Section 18A registered) — missions work in
-South Africa, Zambia, Angola and Congo.
+South Africa, Zambia and Angola.
 
 Static HTML/CSS/JS, no build step. Open `index.html` or serve the folder.
 

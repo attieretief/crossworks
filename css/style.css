@@ -118,6 +118,7 @@ h2{font-size:clamp(30px,4.4vw,50px)}
 .c-name{font-family:var(--head);text-transform:uppercase;letter-spacing:.16em;font-size:12px;color:var(--gold);margin:0 0 6px}
 .contacts a{font-size:19px;text-decoration:none;font-weight:600}
 .contacts a:hover{color:var(--gold)}
+.contacts-single a{font-size:24px}
 
 /* footer */
 .site-footer{background:#1B1712;color:#8E8477;padding:34px 0;font-size:14px}
