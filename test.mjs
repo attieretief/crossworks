@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 /* node test.mjs — the site's whole safety net.
-   Covers what the browser does when an editor saves (the GitHub commit chain),
-   what the build does with whatever lands in content.json, and the sanitiser
-   that stands between the two. */
+   Covers the handover file an editor downloads and Attie imports, what the
+   build does with whatever lands in content.json, and the sanitiser that stands
+   between the two. */
 
 import { readFileSync } from 'node:fs';
-import { github } from './shared/github.mjs';
+import { pack, unpack } from './shared/handover.mjs';
 import { clean, referencedAssets } from './shared/schema.mjs';
 import { renderAll } from './shared/page.mjs';
 import { rich, plain } from './shared/sanitize.mjs';
@@ -18,80 +18,70 @@ const check = (label, pass, extra = '') => {
 
 const content = JSON.parse(readFileSync(new URL('./content.json', import.meta.url), 'utf8'));
 
-/* ── the commit chain ───────────────────────────────────────────────────── */
+/* ── the handover file ──────────────────────────────────────────────────── */
 
-function stubGitHub({ movesUnderUs = 0, push = true } = {}) {
-  const calls = [];
-  let moved = 0;
-  const reply = (data, status = 200) => new Response(JSON.stringify(data), { status });
+const jpeg = 'data:image/jpeg;base64,' + Buffer.from('pretend-jpeg').toString('base64');
 
-  const doFetch = async (url, init = {}) => {
-    const path = String(url).replace('https://api.github.com/repos/attieretief/crossworks', '');
-    const body = init.body ? JSON.parse(init.body) : null;
-    calls.push({ path, method: init.method || 'GET', body });
+{
+  const edited = JSON.parse(JSON.stringify(content));
+  edited.who.body = 'Changed by Vicki.';
+  edited.gallery.items.push({ id: 'gal-new', src: 'img/uploads/2026-08-27-borehole.jpg', alt: 'A new borehole' });
 
-    if (path === '') return reply({ full_name: 'attieretief/crossworks', default_branch: 'main', permissions: { push } });
-    if (path.startsWith('/git/ref/heads/')) return reply({ object: { sha: 'head' + moved } });
-    if (path.startsWith('/git/commits/head')) return reply({ tree: { sha: 'tree' + moved } });
-    if (path === '/git/blobs') return reply({ sha: 'blob' + calls.filter(c => c.path === '/git/blobs').length });
-    if (path === '/git/trees') return reply({ sha: 'newtree' });
-    if (path === '/git/commits') return reply({ sha: 'newcommit' });
-    if (path.startsWith('/git/refs/heads/')) {
-      if (moved < movesUnderUs) { moved++; return reply({ message: 'not a fast forward' }, 422); }
-      return reply({ ok: true });
+  const file = pack({
+    content: edited,
+    uploads: new Map([
+      ['img/uploads/2026-08-27-borehole.jpg', jpeg],
+      ['img/uploads/changed-my-mind.jpg', jpeg]      /* dropped before download */
+    ]),
+    editor: 'Vicki'
+  });
+
+  check('the file says what it is', file.format === 'crossworks/handover@1' && file.editor === 'Vicki');
+  check('only photos the page uses are carried',
+    Object.keys(file.uploads).join() === 'img/uploads/2026-08-27-borehole.jpg');
+
+  const back = unpack(JSON.stringify(file));
+  check('it survives the round trip', back.content.who.body === 'Changed by Vicki.');
+  check('the photo comes back as bytes', back.photos[0]?.path === 'img/uploads/2026-08-27-borehole.jpg'
+    && Buffer.from(back.photos[0].base64, 'base64').toString() === 'pretend-jpeg');
+  check('nothing is reported missing', back.missing.length === 0);
+}
+
+{
+  /* the file arrives by email from someone else's laptop — treat it as hostile */
+  const hostile = {
+    format: 'crossworks/handover@1',
+    editor: 'Vicki',
+    content: { ...content, who: { ...content.who, body: '<script>fetch("//evil")</script>caught' } },
+    uploads: {
+      '../../.github/workflows/evil.yml': jpeg,
+      'img/uploads/../../../etc/passwd': jpeg,
+      'img/uploads/notaphoto.jpg': 'data:text/html;base64,' + Buffer.from('<script>').toString('base64'),
+      'js/editor.js': jpeg
     }
-    return reply({ message: 'unexpected ' + path }, 500);
   };
-
-  return { doFetch, calls };
+  const back = unpack(JSON.stringify(hostile));
+  check('a hostile file yields no files to write', back.photos.length === 0, `${back.photos.length} would be written`);
+  check('every rejected path is reported, not silently dropped', back.skipped.length === 4);
+  check('its markup is stripped on the way in', back.content.who.body === 'caught');
 }
 
 {
-  const { doFetch, calls } = stubGitHub();
-  const gh = github({ token: 'tok', repo: 'attieretief/crossworks', fetch: doFetch });
-  const info = await gh.check();
-  check('a key with push access is accepted', info.repo === 'attieretief/crossworks');
-
-  const sha = await gh.commit({
-    branch: 'main',
-    files: [
-      { path: 'content.json', content: '{}' },
-      { path: 'img/uploads/a.jpg', base64: 'AAAA' }
-    ],
-    message: 'Site edit by Vicki',
-    author: { name: 'Vicki', email: 'info@crossworksmissions.org' }
-  });
-  check('the commit lands', sha === 'newcommit');
-  check('one blob per file', calls.filter(c => c.path === '/git/blobs').length === 2);
-  check('the photo is sent as base64', calls.find(c => c.body?.encoding === 'base64')?.content === undefined
-    && calls.some(c => c.body?.encoding === 'base64'));
-  check('the commit is credited to the editor', calls.find(c => c.path === '/git/commits')?.body.author.name === 'Vicki');
-  check('it builds on the current head, not a blank tree',
-    calls.find(c => c.path === '/git/trees')?.body.base_tree === 'tree0');
+  let refused = '';
+  try { unpack('{"format":"something-else"}'); } catch (err) { refused = err.message; }
+  check('a file from somewhere else is refused', /Crossworks handover file/.test(refused));
+  try { unpack('not json at all'); } catch (err) { refused = err.message; }
+  check('a mangled file is refused', /not readable/.test(refused));
 }
 
 {
-  const { doFetch } = stubGitHub({ push: false });
-  let refused = false;
-  try { await github({ token: 'tok', repo: 'attieretief/crossworks', fetch: doFetch }).check(); }
-  catch (err) { refused = err.status === 403; }
-  check('a read-only key is refused at sign-in', refused);
-}
-
-{
-  /* someone else saves while this one is mid-flight */
-  const { doFetch, calls } = stubGitHub({ movesUnderUs: 1 });
-  const sha = await github({ token: 'tok', repo: 'attieretief/crossworks', fetch: doFetch }).commit({
-    branch: 'main',
-    files: [{ path: 'content.json', content: '{}' }],
-    message: 'Site edit by Reynold',
-    author: { name: 'Reynold', email: 'info@crossworksmissions.org' }
-  });
-  check('a branch that moved is rebuilt on, not clobbered', sha === 'newcommit');
-  check('the retry rebased onto the new head',
-    calls.filter(c => c.path === '/git/trees').map(c => c.body.base_tree).join(',') === 'tree0,tree1');
-  check('the photos were not re-uploaded on the retry', calls.filter(c => c.path === '/git/blobs').length === 1);
-  check('nothing was force-pushed', !calls.some(c => c.body?.force));
+  /* a photo referenced but not carried — the gap is named rather than hidden */
+  const doc = {
+    format: 'crossworks/handover@1',
+    content: { ...content, gallery: { ...content.gallery, items: [{ id: 'g', src: 'img/uploads/lost.jpg', alt: '' }] } },
+    uploads: {}
+  };
+  check('a missing photo is called out', unpack(JSON.stringify(doc)).missing.includes('img/uploads/lost.jpg'));
 }
 
 /* ── the gate on what gets stored ───────────────────────────────────────── */

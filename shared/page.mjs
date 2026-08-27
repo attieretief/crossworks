@@ -67,7 +67,6 @@ function footer(c, base) {
 
 const scripts = base => `<div class="toast" id="toast">Copied</div>
 <script>window.CROSSWORKS_BASE=${JSON.stringify(base || './')}</script>
-<script src="${base}js/config.js"></script>
 <script src="${base}js/site.js"></script>`;
 
 /* ── home page sections ─────────────────────────────────────────────────── */

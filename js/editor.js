@@ -1,25 +1,24 @@
 /* Crossworks in-page editor.
    Loaded on demand from js/site.js (?edit, or Ctrl/Cmd+Shift+E). Visitors never
    see it. The page itself is the editing surface: content.json is the working
-   copy, shared/page.mjs re-renders whenever something is added, moved or
-   removed, and Save commits straight to GitHub with the editor's own access
-   key. The build workflow then rebuilds the pages. */
+   copy, and shared/page.mjs re-renders whenever something is added, moved or
+   removed. Nothing here can publish and nothing here holds a credential: the
+   work is kept as a draft in this browser, and **Download changes** writes one
+   file to hand to Attie, who puts it live. */
 
 import { renderHome, renderPost } from '../shared/page.mjs';
 import { slug } from '../shared/sanitize.mjs';
-import { clean, referencedAssets } from '../shared/schema.mjs';
-import { github } from '../shared/github.mjs';
+import { pack } from '../shared/handover.mjs';
 
-const CONFIG = window.CROSSWORKS || {};
 const BASE = window.CROSSWORKS_BASE || '';
-const SESSION_KEY = 'cw.key';
+const DRAFT_KEY = 'cw.draft';
 const MAX_UPLOAD_BYTES = 18 * 1024 * 1024;   /* one save's worth of photos, comfortably under GitHub's blob limit */
 const MAX_EDGE = 1600;                        /* photos are downscaled before they leave the browser */
 
 const state = {
   content: null,
   original: '',
-  session: null,
+  editor: '',           /* whoever is at the keyboard, for the handover file */
   page: null,           /* {kind:'home'} or {kind:'post', slug} */
   uploads: new Map(),   /* repo path -> data URL, sent on save */
   previews: new Map(),  /* repo path -> data URL, shown until then */
@@ -71,66 +70,46 @@ const button = (label, title, onclick, cls = '') =>
 
 function buildBar() {
   state.bar?.remove();
+  barShows = dirty();
   state.status = el('p', { class: 'cw-status' });
 
+  const download = button('Download changes', 'Write the file to send to Attie', onDownload, 'cw-primary');
+  download.disabled = !dirty();
+
   const bar = el('div', { class: 'cw-bar', role: 'region', 'aria-label': 'Page editor' });
-
-  if (!state.session) {
-    const name = el('input', { type: 'text', placeholder: 'Your name', autocomplete: 'name' });
-    const key = el('input', { type: 'password', placeholder: 'Access key', autocomplete: 'current-password' });
-
-    const submit = async () => {
-      if (!name.value.trim()) return say('Put your name in, so the history shows who changed what.', 'bad');
-      if (!key.value.trim()) return say('Paste the access key Attie gave you.', 'bad');
-      say('Checking the key…');
-      try {
-        await github({ token: key.value.trim(), repo: CONFIG.repo }).check();
-        state.session = { name: name.value.trim(), token: key.value.trim() };
-        localStorage.setItem(SESSION_KEY, JSON.stringify(state.session));
-        await startEditing();
-      } catch (err) {
-        say(err.status === 401 ? 'That key was not accepted.'
-          : err.status === 403 ? 'That key cannot change this site.'
-          : 'Could not reach GitHub just now.', 'bad');
-        key.select();
-      }
-    };
-
-    const form = el('form', { class: 'cw-signin', onsubmit: e => { e.preventDefault(); submit(); } },
-      name, key,
-      el('button', { type: 'submit', class: 'cw-btn cw-primary' }, 'Start editing'));
-    bar.append(
-      el('span', { class: 'cw-title' }, 'Edit this page'),
-      form,
-      button('✕', 'Close the editor', () => bar.remove()),
-      state.status
-    );
-    setTimeout(() => name.focus(), 0);
-  } else {
-    const save = button('Save changes', 'Publish these changes', onSave, 'cw-primary');
-    save.disabled = !dirty();
-    bar.dataset.dirty = dirty() ? '1' : '';
-    bar.append(
-      el('span', { class: 'cw-title' }, `Editing as ${state.session.name}`),
-      button('Discard', 'Throw away every unsaved change', () => {
-        if (dirty() && !confirm('Discard every change you have made since the last save?')) return;
-        location.reload();
-      }),
-      save,
-      button('Sign out', 'Forget the access key on this device', () => {
-        if (dirty() && !confirm('You have unsaved changes. Sign out anyway?')) return;
-        localStorage.removeItem(SESSION_KEY);
-        location.reload();
-      }),
-      state.status
-    );
-  }
+  bar.dataset.dirty = dirty() ? '1' : '';
+  bar.append(
+    el('span', { class: 'cw-title' }, 'Editing'),
+    button('Start again', 'Throw away every change and go back to what is on the site', () => {
+      if (dirty() && !confirm('Throw away every change you have made?')) return;
+      localStorage.removeItem(DRAFT_KEY);
+      location.reload();
+    }),
+    download,
+    button('✕', 'Close the editor', () => {
+      if (dirty() && !confirm('Close the editor? Your changes stay saved on this computer.')) return;
+      location.href = location.pathname;
+    }),
+    state.status
+  );
 
   document.body.append(bar);
   state.bar = bar;
 }
 
-const refreshBar = () => { if (state.session) buildBar(); };
+/* Typing fires this on every keystroke: keep the draft write off the hot path,
+   and only touch the bar when it actually needs to change. */
+let draftTimer = null;
+let barShows = null;
+function refreshBar() {
+  clearTimeout(draftTimer);
+  draftTimer = setTimeout(saveDraft, 900);
+  const now = dirty();
+  if (now !== barShows) {
+    barShows = now;
+    buildBar();
+  }
+}
 
 /* ── images ─────────────────────────────────────────────────────────────── */
 
@@ -495,38 +474,58 @@ function redraw() {
 
 /* ── save ───────────────────────────────────────────────────────────────── */
 
-async function onSave() {
-  if (!dirty()) return say('Nothing has changed yet.');
-  say('Saving…');
-  state.bar.querySelectorAll('button').forEach(b => { b.disabled = true; });
+/* ── the draft, and the file that carries it out ────────────────────────── */
 
-  const content = clean(state.content);
-  const wanted = referencedAssets(content);
-  const files = [{ path: 'content.json', content: JSON.stringify(content, null, 2) + '\n' }];
-  for (const [path, dataUrl] of state.uploads) {
-    if (!wanted.has(path)) continue;            /* dropped before it was saved */
-    files.push({ path, base64: dataUrl.slice(dataUrl.indexOf(',') + 1) });
-  }
-
+/* Nothing is published from here, so an unfinished letter must survive a closed
+   tab, a flat battery or a stray reload. */
+function saveDraft() {
+  if (!dirty()) return localStorage.removeItem(DRAFT_KEY);
   try {
-    await github({ token: state.session.token, repo: CONFIG.repo }).commit({
-      branch: CONFIG.branch || 'main',
-      files,
-      message: `Site edit by ${state.session.name}`,
-      author: { name: state.session.name, email: CONFIG.commitEmail || 'info@crossworksmissions.org' }
-    });
-
-    state.uploads.clear();
-    state.content = content;
-    state.original = JSON.stringify(content);
-    redraw();
-    say('Saved. The live site updates in a minute or two.', 'good');
-  } catch (err) {
-    buildBar();
-    say(err.status === 401 || err.status === 403
-      ? 'Your access key is no longer accepted — ask Attie for a new one.'
-      : 'GitHub would not take the change. Try again in a moment.', 'bad');
+    localStorage.setItem(DRAFT_KEY, JSON.stringify({
+      content: state.content,
+      uploads: [...state.uploads],
+      editor: state.editor,
+      at: new Date().toISOString()
+    }));
+  } catch (_) {
+    /* out of room — usually too many photos. The work stays in the page. */
+    say('This computer will not hold any more photos as a draft. Download your changes now.', 'bad');
   }
+}
+
+function readDraft() {
+  try {
+    const draft = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null');
+    return draft?.content ? draft : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+const humanSize = bytes => bytes > 900_000
+  ? `${(bytes / 1_000_000).toFixed(1)} MB`
+  : `${Math.max(1, Math.round(bytes / 1000))} KB`;
+
+function onDownload() {
+  if (!dirty()) return say('Nothing has changed yet.');
+
+  const name = state.editor || prompt('Who should Attie thank for these changes?', '') || '';
+  state.editor = name.trim();
+
+  const file = pack({ content: state.content, uploads: state.uploads, editor: state.editor });
+  const text = JSON.stringify(file);
+  const stamp = new Date().toISOString().slice(0, 10);
+  const filename = `crossworks-${stamp}${state.editor ? '-' + slug(state.editor, 'edit') : ''}.json`;
+
+  const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+  const link = el('a', { href: url, download: filename });
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10_000);
+
+  const photos = Object.keys(file.uploads).length;
+  say(`Saved ${filename} to your downloads — ${humanSize(text.length)}${photos ? `, ${photos} new photo${photos > 1 ? 's' : ''}` : ''}. Send it to Attie and he will put it on the site.`, 'good');
 }
 
 /* ── start ──────────────────────────────────────────────────────────────── */
@@ -535,8 +534,21 @@ async function startEditing() {
   const res = await fetch(BASE + 'content.json', { cache: 'no-store' });
   state.content = await res.json();
   state.original = JSON.stringify(state.content);
+
+  /* Unfinished work comes back on its own. Nothing asks a question that could
+     throw it away by accident — only "Start again" does that, and it asks. */
+  const draft = readDraft();
+  if (draft) {
+    state.content = draft.content;
+    state.uploads = new Map(draft.uploads || []);
+    state.previews = new Map(draft.uploads || []);
+    state.editor = draft.editor || '';
+  }
+
   redraw();
-  say('Click any text to change it. Click a photo to replace it.');
+  say(draft
+    ? `Picked up where you left off on ${new Date(draft.at).toLocaleString('en-ZA', { dateStyle: 'medium', timeStyle: 'short' })}. "Start again" throws these changes away.`
+    : 'Click any text to change it. Click a photo to replace it. Nothing goes live until you send Attie the file.');
 }
 
 state.page = document.body.classList.contains('post-page')
@@ -544,15 +556,7 @@ state.page = document.body.classList.contains('post-page')
   : { kind: 'home' };
 
 addEventListener('beforeunload', e => {
-  if (state.session && dirty()) e.preventDefault();
+  if (dirty()) { saveDraft(); e.preventDefault(); }
 });
 
-try {
-  state.session = JSON.parse(localStorage.getItem(SESSION_KEY) || 'null');
-  if (!state.session?.token || !state.session?.name) state.session = null;
-} catch (_) {
-  state.session = null;
-}
-
-if (state.session) startEditing().catch(() => { state.session = null; buildBar(); });
-else buildBar();
+startEditing();
