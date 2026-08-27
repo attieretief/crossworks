@@ -70,49 +70,6 @@ if (!reduced && 'IntersectionObserver' in window) {
   }, 2500);
 }
 
-/* ── newsletter signup ──────────────────────────────────────────────────── */
-const signup = document.getElementById('signup');
-if (signup) {
-  const note = signup.querySelector('.signup-note');
-  const button = signup.querySelector('button');
-  const say = (msg, isError) => {
-    note.textContent = msg;
-    note.classList.toggle('error', !!isError);
-  };
-
-  signup.addEventListener('submit', async e => {
-    e.preventDefault();
-    if (document.body.classList.contains('cw-editing')) return;
-
-    const api = (window.CROSSWORKS && window.CROSSWORKS.api) || '';
-    const data = Object.fromEntries(new FormData(signup));
-    if (data.company) return;                        /* honeypot */
-    if (!data.email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(data.email)) {
-      return say('That email address does not look right.', true);
-    }
-    if (!api) {
-      return say('The sign-up list is not connected yet — please email us instead.', true);
-    }
-
-    button.disabled = true;
-    say('Sending…');
-    try {
-      const res = await fetch(api.replace(/\/$/, '') + '/subscribe', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ name: data.name || '', email: data.email })
-      });
-      if (!res.ok) throw new Error(await res.text());
-      signup.querySelectorAll('input').forEach(i => { i.value = ''; });
-      say(note.dataset.success || 'Thank you.');
-    } catch (_) {
-      say('That did not go through. Please try again, or email us.', true);
-    } finally {
-      button.disabled = false;
-    }
-  });
-}
-
 /* ── editor ─────────────────────────────────────────────────────────────── */
 /* Loaded on demand only: ?edit in the URL, or Ctrl/Cmd + Shift + E. Visitors
    never download a byte of it. */
@@ -121,12 +78,13 @@ if (signup) {
   const openEditor = () => {
     if (loading) return;
     loading = true;
+    const base = window.CROSSWORKS_BASE || '';
     const css = document.createElement('link');
     css.rel = 'stylesheet';
-    css.href = 'css/editor.css';
+    css.href = base + 'css/editor.css';
     document.head.appendChild(css);
     const js = document.createElement('script');
-    js.src = 'js/editor.js';
+    js.src = base + 'js/editor.js';
     js.type = 'module';
     document.body.appendChild(js);
   };

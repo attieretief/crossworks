@@ -55,6 +55,16 @@ p.cw-item>.cw-tools{top:-4px}
 
 /* blocks that only an editor can see */
 .cw-revealed{outline:1px dashed rgba(230,175,14,.5);outline-offset:6px}
+.posts.cw-revealed{display:grid}
+
+/* a letter's text, opened up under its card on the home page */
+.cw-panel{border-top:1px dashed rgba(230,175,14,.6);margin:0;padding:18px 24px 22px;background:rgba(230,175,14,.05)}
+.cw-panel-title{font-family:"Oswald",Impact,sans-serif;text-transform:uppercase;letter-spacing:.18em;
+  font-size:11px;color:#8a6b06;margin:0 0 10px}
+.cw-panel p[data-edit]{font-size:15px;color:#4b4339;margin:0 0 12px;line-height:1.6}
+.cw-panel p[data-edit]:empty::before{content:"Write here…";color:#a2988a}
+.cw-add-sm{padding:6px 14px;font-size:13px}
+.post-page .post-body p[data-edit]:empty::before{content:"Write here…";color:#a2988a}
 
 @media (max-width:640px){
   .cw-bar{left:12px;right:12px;bottom:12px}

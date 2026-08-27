@@ -1,16 +1,15 @@
 /* Crossworks editor service.
-   Four jobs: check an editor's passphrase, commit their changes to GitHub,
-   take newsletter sign-ups, and hand the list back to an editor. It holds the
-   only credential in the system — a fine-grained GitHub token — so the site
-   itself stays a folder of static files. */
+   Two jobs: check an editor's passphrase, and commit their changes to GitHub.
+   It holds the only credential in the system — a fine-grained GitHub token — so
+   the site itself stays a folder of static files. It does not render anything:
+   .github/workflows/build.yml rebuilds the pages from content.json after the
+   commit lands. */
 
-import { render } from '../../shared/page.mjs';
 import { clean, referencedAssets } from '../../shared/schema.mjs';
 
 const SESSION_HOURS = 8;
 const MAX_BODY_BYTES = 22 * 1024 * 1024;
-const UPLOAD_PREFIXES = ['img/uploads/', 'newsletters/'];
-const SIGNUPS_PER_HOUR = 5;
+const UPLOAD_PREFIXES = ['img/uploads/'];
 
 /* ── helpers ────────────────────────────────────────────────────────────── */
 
@@ -53,7 +52,9 @@ async function readToken(env, request) {
   if (!payload || !signature) return null;
   if (!timingSafeEqual(signature, await hmac(env.SESSION_SECRET, payload))) return null;
   try {
-    const claims = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(payload.replace(/-/g, '+').replace(/_/g, '/')), ch => ch.charCodeAt(0))));
+    const claims = JSON.parse(new TextDecoder().decode(
+      Uint8Array.from(atob(payload.replace(/-/g, '+').replace(/_/g, '/')), ch => ch.charCodeAt(0))
+    ));
     return claims.exp > Date.now() ? claims : null;
   } catch (_) {
     return null;
@@ -89,7 +90,7 @@ async function gh(env, path, init = {}) {
   return res.json();
 }
 
-/** One commit carrying content.json, the rendered index.html and any new files. */
+/** One commit carrying content.json and any newly uploaded photos. */
 async function commit(env, { files, message, author }) {
   const branch = env.BRANCH || 'main';
   const ref = await gh(env, `/git/ref/heads/${branch}`);
@@ -154,8 +155,7 @@ async function auth(request, env) {
 
 function decodeDataUrl(dataUrl) {
   const m = /^data:([\w./+-]+);base64,([A-Za-z0-9+/=]+)$/.exec(String(dataUrl || ''));
-  if (!m) return null;
-  return { type: m[1], base64: m[2], bytes: Math.floor(m[2].length * 0.75) };
+  return m ? { type: m[1], base64: m[2], bytes: Math.floor(m[2].length * 0.75) } : null;
 }
 
 async function save(request, env) {
@@ -167,11 +167,7 @@ async function save(request, env) {
 
   const content = clean(body.content);
   const wanted = referencedAssets(content);
-
-  const files = [
-    { path: 'content.json', content: JSON.stringify(content, null, 2) + '\n' },
-    { path: 'index.html', content: render(content) }
-  ];
+  const files = [{ path: 'content.json', content: JSON.stringify(content, null, 2) + '\n' }];
 
   let uploadedBytes = 0;
   for (const upload of (Array.isArray(body.uploads) ? body.uploads : []).slice(0, 60)) {
@@ -182,7 +178,7 @@ async function save(request, env) {
 
     const decoded = decodeDataUrl(upload.dataUrl);
     if (!decoded) continue;
-    if (!/^(image\/(jpeg|png|webp)|application\/pdf)$/.test(decoded.type)) continue;
+    if (!/^image\/(jpeg|png|webp)$/.test(decoded.type)) continue;
 
     uploadedBytes += decoded.bytes;
     if (uploadedBytes > MAX_BODY_BYTES) return json({ error: 'Too many photos in one save — save these, then add the rest.' }, 413);
@@ -190,64 +186,11 @@ async function save(request, env) {
   }
 
   try {
-    const sha = await commit(env, {
-      files,
-      author: who.name,
-      message: `Site edit by ${who.name}`
-    });
+    const sha = await commit(env, { files, author: who.name, message: `Site edit by ${who.name}` });
     return json({ ok: true, commit: sha });
   } catch (err) {
     return json({ error: 'GitHub refused the change. Try again in a moment.', detail: String(err).slice(0, 200) }, 502);
   }
-}
-
-async function subscribe(request, env) {
-  const { name, email } = await request.json().catch(() => ({}));
-  const address = String(email || '').trim().toLowerCase();
-  if (!/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(address) || address.length > 160) {
-    return json({ error: 'That email address does not look right.' }, 400);
-  }
-
-  const ip = request.headers.get('cf-connecting-ip') || 'unknown';
-  const bucket = `rate:${await sha256Hex(env.SESSION_SECRET + ip)}`;
-  const seen = Number(await env.SUBSCRIBERS.get(bucket)) || 0;
-  if (seen >= SIGNUPS_PER_HOUR) return json({ error: 'Too many sign-ups from here just now.' }, 429);
-  await env.SUBSCRIBERS.put(bucket, String(seen + 1), { expirationTtl: 3600 });
-
-  const existing = await env.SUBSCRIBERS.get(`sub:${address}`);
-  await env.SUBSCRIBERS.put(`sub:${address}`, JSON.stringify({
-    email: address,
-    name: String(name || '').trim().slice(0, 120),
-    joined: existing ? JSON.parse(existing).joined : new Date().toISOString()
-  }));
-  return json({ ok: true });
-}
-
-async function subscribers(request, env) {
-  if (!(await readToken(env, request))) return json({ error: 'Sign in first.' }, 401);
-
-  const rows = [];
-  let cursor;
-  do {
-    const page = await env.SUBSCRIBERS.list({ prefix: 'sub:', cursor });
-    for (const key of page.keys) {
-      const value = await env.SUBSCRIBERS.get(key.name);
-      if (value) rows.push(JSON.parse(value));
-    }
-    cursor = page.list_complete ? null : page.cursor;
-  } while (cursor);
-
-  rows.sort((a, b) => a.joined.localeCompare(b.joined));
-  const csv = ['email,name,joined', ...rows.map(r =>
-    [r.email, r.name, r.joined].map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')
-  )].join('\n');
-
-  return new Response(csv, {
-    headers: {
-      'content-type': 'text/csv; charset=utf-8',
-      'content-disposition': 'attachment; filename="crossworks-subscribers.csv"'
-    }
-  });
 }
 
 export default {
@@ -256,12 +199,7 @@ export default {
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers });
 
     const { pathname } = new URL(request.url);
-    const routes = {
-      'POST /auth': auth,
-      'POST /save': save,
-      'POST /subscribe': subscribe,
-      'GET /subscribers': subscribers
-    };
+    const routes = { 'POST /auth': auth, 'POST /save': save };
     const handler = routes[`${request.method} ${pathname}`];
     if (!handler) return json({ error: 'Not found' }, 404, headers);
 

@@ -171,14 +171,12 @@
       }
     ]
   },
-  "newsletter": {
-    "overline": "Stay with us",
-    "title": "Newsletter",
-    "blurb": "A few times a year we write about what your giving has done — the boreholes sunk, the clinic kept open, the young people who now own a Bible. Leave your address and we will send it to you.",
-    "buttonLabel": "Sign me up",
-    "successMessage": "Thank you — you are on the list.",
-    "archiveTitle": "Past issues",
-    "issues": []
+  "news": {
+    "overline": "From the field",
+    "title": "News",
+    "blurb": "Letters from the work — what your giving has done, and where it is going next.",
+    "emptyNote": "The first letter is on its way.",
+    "posts": []
   },
   "give": {
     "overline": "Partner with us",

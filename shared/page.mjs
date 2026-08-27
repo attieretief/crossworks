@@ -1,11 +1,11 @@
-/* The single source of the page's markup. `build.mjs` runs it locally; the
-   Worker runs the same function when an editor saves, so index.html on GitHub
-   Pages is always plain static HTML — no client-side rendering, no JS needed to
-   read the site. */
+/* The single source of the site's markup. `build.mjs` runs it in the GitHub
+   Actions build; the editor runs it in the browser to preview a change. The
+   published site is plain static HTML — no client-side rendering, and it reads
+   fine with JavaScript off. */
 
-import { esc, plain, rich } from './sanitize.mjs';
+import { esc, plain, rich, slug } from './sanitize.mjs';
 
-/* data-edit marks a field the floating editor can change; data-rich allows the
+/* data-edit marks a field the in-page editor can change; data-rich allows the
    small inline tag set (<br>, <strong>, <em>, <a>) instead of plain text. */
 const t = path => `data-edit="${esc(path)}"`;
 
@@ -14,6 +14,63 @@ function field(path, value, tag, cls, { rich: isRich = false } = {}) {
     .filter(Boolean).join(' ');
   return `<${tag} ${attrs}>${isRich ? rich(value) : plain(value)}</${tag}>`;
 }
+
+export const postPath = post => `news/${slug(post.slug || post.title, post.id)}/index.html`;
+export const postUrl = post => `news/${slug(post.slug || post.title, post.id)}/`;
+
+/* ── shared chrome ──────────────────────────────────────────────────────── */
+
+function head({ title, description, image, base }) {
+  return `<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${plain(title)}</title>
+<meta name="description" content="${plain(description)}">
+<meta property="og:title" content="${plain(title)}">
+<meta property="og:description" content="${plain(description)}">
+<meta property="og:image" content="${base}${esc(image)}">
+<meta property="og:type" content="website">
+<link rel="icon" href="${base}img/logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="${base}css/style.css">`;
+}
+
+function header(base) {
+  const home = base || '';
+  return `<header class="site-header" id="top">
+  <a class="brand" href="${home}${base ? '' : '#top'}">
+    <img src="${base}img/logo.png" alt="Crossworks logo" width="46" height="46">
+    <span class="brand-name">Crossworks</span>
+  </a>
+  <nav class="nav">
+    <a href="${home}#who">Who we are</a>
+    <a href="${home}#projects">Projects</a>
+    <a href="${home}#gallery">Gallery</a>
+    <a href="${home}#news">News</a>
+    <a href="${home}#contact">Contact</a>
+    <a class="btn btn-outline btn-sm" href="${home}#give">Donate</a>
+  </nav>
+  <button class="nav-toggle" aria-label="Menu" aria-expanded="false">☰</button>
+</header>`;
+}
+
+function footer(c, base) {
+  return `<footer class="site-footer">
+  <div class="wrap footer-inner">
+    <img src="${base}img/logo.png" alt="" width="40" height="40">
+    <p ${t('footer.line')}>${plain(c.footer.line)}</p>
+    <p class="copy">© <span id="year">2026</span> Crossworks</p>
+  </div>
+</footer>`;
+}
+
+const scripts = base => `<div class="toast" id="toast">Copied</div>
+<script>window.CROSSWORKS_BASE=${JSON.stringify(base || './')}</script>
+<script src="${base}js/config.js"></script>
+<script src="${base}js/site.js"></script>`;
+
+/* ── home page sections ─────────────────────────────────────────────────── */
 
 function projectCard(card, path) {
   const wide = card.wide ? ' card-wide' : '';
@@ -34,76 +91,41 @@ ${group.items.map((c, i) => projectCard(c, `${path}.items.${i}`)).join('\n')}
     </div>`;
 }
 
-function newsletterSection(n) {
-  const issues = (n.issues || []).map((issue, i) => `        <li data-item="newsletter.issues.${i}" data-kind="issue">
-          <a href="${esc(issue.file)}" ${issue.file.endsWith('.pdf') ? 'target="_blank" rel="noopener"' : ''}>
-            <span class="issue-date" data-edit="newsletter.issues.${i}.date">${plain(issue.date)}</span>
-            <span class="issue-title" data-edit="newsletter.issues.${i}.title">${plain(issue.title)}</span>
-          </a>
-        </li>`).join('\n');
+function newsSection(c) {
+  const posts = c.news.posts;
+  const cards = posts.map((post, i) => `      <article class="post-card" data-item="news.posts.${i}" data-kind="post">
+        <a class="post-link" href="${postUrl(post)}">
+          <img src="${esc(post.image)}" alt="${plain(post.alt)}" loading="lazy" ${t(`news.posts.${i}.image`)} data-image>
+          <div class="post-card-body">
+            <p class="post-date" ${t(`news.posts.${i}.date`)}>${plain(post.date)}</p>
+            <h3 ${t(`news.posts.${i}.title`)}>${plain(post.title)}</h3>
+            <p class="post-summary" ${t(`news.posts.${i}.summary`)} data-rich="1">${rich(post.summary)}</p>
+            <span class="post-more">Read the letter</span>
+          </div>
+        </a>
+      </article>`).join('\n');
 
-  return `<section class="section section-light" id="newsletter">
-  <div class="wrap narrow">
-    <p class="overline dark" ${t('newsletter.overline')}>${plain(n.overline)}</p>
-    <h2 class="section-title dark center" ${t('newsletter.title')}>${plain(n.title)}</h2>
-    <p class="body-lg center" ${t('newsletter.blurb')} data-rich="1">${rich(n.blurb)}</p>
-
-    <form class="signup" id="signup" novalidate>
-      <label class="sr-only" for="signup-name">Your name</label>
-      <input id="signup-name" name="name" type="text" autocomplete="name" placeholder="Your name" required>
-      <label class="sr-only" for="signup-email">Your email</label>
-      <input id="signup-email" name="email" type="email" autocomplete="email" placeholder="you@example.com" required>
-      <div class="hp" aria-hidden="true"><label>Leave this empty<input name="company" tabindex="-1" autocomplete="off"></label></div>
-      <button class="btn btn-gold" type="submit" ${t('newsletter.buttonLabel')}>${plain(n.buttonLabel)}</button>
-      <p class="signup-note" role="status" data-success="${plain(n.successMessage)}"></p>
-    </form>
-
-    <div class="issues${(n.issues || []).length ? '' : ' is-empty'}">
-      <p class="issues-title" ${t('newsletter.archiveTitle')}>${plain(n.archiveTitle)}</p>
-      <ul data-list="newsletter.issues">
-${issues}
-      </ul>
+  return `<section class="section section-light" id="news">
+  <div class="wrap">
+    <p class="overline dark" ${t('news.overline')}>${plain(c.news.overline)}</p>
+    <h2 class="section-title dark" ${t('news.title')}>${plain(c.news.title)}</h2>
+    <p class="body-lg" ${t('news.blurb')} data-rich="1">${rich(c.news.blurb)}</p>
+    <div class="posts${posts.length ? '' : ' is-empty'}" data-list="news.posts">
+${cards}
     </div>
-  </div>
+${posts.length ? '' : `    <p class="posts-empty" ${t('news.emptyNote')}>${plain(c.news.emptyNote)}</p>\n`}  </div>
 </section>`;
 }
 
-export function render(c) {
-  const year = '2026';
+export function renderHome(c) {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${plain(c.meta.title)}</title>
-<meta name="description" content="${plain(c.meta.description)}">
-<meta property="og:title" content="Crossworks">
-<meta property="og:description" content="${plain(c.meta.ogDescription)}">
-<meta property="og:image" content="${esc(c.hero.image)}">
-<meta property="og:type" content="website">
-<link rel="icon" href="img/logo.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css">
+${head({ title: c.meta.title, description: c.meta.description, image: c.hero.image, base: '' })}
 </head>
 <body>
 
-<header class="site-header" id="top">
-  <a class="brand" href="#top">
-    <img src="img/logo.png" alt="Crossworks logo" width="46" height="46">
-    <span class="brand-name">Crossworks</span>
-  </a>
-  <nav class="nav">
-    <a href="#who">Who we are</a>
-    <a href="#projects">Projects</a>
-    <a href="#gallery">Gallery</a>
-    <a href="#newsletter">Newsletter</a>
-    <a href="#contact">Contact</a>
-    <a class="btn btn-outline btn-sm" href="#give">Donate</a>
-  </nav>
-  <button class="nav-toggle" aria-label="Menu" aria-expanded="false">☰</button>
-</header>
+${header('')}
 
 <section class="hero">
   <img class="hero-img" src="${esc(c.hero.image)}" alt="${plain(c.hero.alt)}" ${t('hero.image')} data-image>
@@ -151,7 +173,7 @@ ${c.gallery.items.map((g, i) => `      <img src="${esc(g.src)}" alt="${plain(g.a
   </div>
 </section>
 
-${newsletterSection(c.newsletter)}
+${newsSection(c)}
 
 <section class="section section-gold" id="give">
   <div class="wrap narrow">
@@ -179,18 +201,61 @@ ${c.give.fields.map((fl, i) => `        <div><dt ${t(`give.fields.${i}.label`)}>
   </div>
 </section>
 
-<footer class="site-footer">
-  <div class="wrap footer-inner">
-    <img src="img/logo.png" alt="" width="40" height="40">
-    <p ${t('footer.line')}>${plain(c.footer.line)}</p>
-    <p class="copy">© <span id="year">${year}</span> Crossworks</p>
-  </div>
-</footer>
+${footer(c, '')}
 
-<div class="toast" id="toast">Copied</div>
-<script src="js/config.js"></script>
-<script src="js/site.js"></script>
+${scripts('')}
 </body>
 </html>
 `;
+}
+
+/* ── a single post ──────────────────────────────────────────────────────── */
+
+export function renderPost(c, index) {
+  const post = c.news.posts[index];
+  const base = '../../';
+  const path = `news.posts.${index}`;
+  const summary = plain(post.summary) || plain(post.title);
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+${head({ title: `${post.title} — Crossworks`, description: summary, image: post.image, base })}
+</head>
+<body class="post-page" data-base="${base}">
+
+${header(base)}
+
+<article class="post">
+  <div class="post-banner">
+    <img src="${base}${esc(post.image)}" alt="${plain(post.alt)}" ${t(`${path}.image`)} data-image>
+    <div class="post-banner-inner">
+      <p class="overline" ${t(`${path}.date`)}>${plain(post.date)}</p>
+      <h1 ${t(`${path}.title`)}>${plain(post.title)}</h1>
+    </div>
+  </div>
+
+  <div class="wrap narrow post-body">
+    <p class="post-lead" ${t(`${path}.summary`)} data-rich="1">${rich(post.summary)}</p>
+    <div data-list="${path}.body">
+${post.body.map((para, i) => `      <p data-item="${path}.body.${i}" data-kind="para" ${t(`${path}.body.${i}`)} data-rich="1">${rich(para)}</p>`).join('\n')}
+    </div>
+    <p class="post-back"><a href="${base}#news">← All the letters</a></p>
+  </div>
+</article>
+
+${footer(c, base)}
+
+${scripts(base)}
+</body>
+</html>
+`;
+}
+
+/** Every file the site is made of. */
+export function renderAll(c) {
+  return [
+    { path: 'index.html', html: renderHome(c) },
+    ...c.news.posts.map((post, i) => ({ path: postPath(post), html: renderPost(c, i) }))
+  ];
 }

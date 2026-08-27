@@ -35,8 +35,13 @@ export function esc(s) {
 
 /** Plain text: every tag dropped, the text inside kept. */
 export function plain(s) {
-  return esc(decode(String(s ?? '').replace(/<[^>]*>/g, '')).replace(/\s+/g, ' ').trim());
+  return esc(decode(strip(s).replace(/<[^>]*>/g, '')).replace(/\s+/g, ' ').trim());
 }
+
+/* Tags whose *contents* are code, not prose. Stripping the tag alone would
+   leave the script body sitting on the page as visible text. */
+const DROP_WHOLE = /<\s*(script|style|template|iframe|object|noscript)\b[\s\S]*?(<\s*\/\s*\1\s*>|$)/gi;
+const strip = s => String(s ?? '').replace(DROP_WHOLE, '');
 
 const SELF_CLOSING = new Set(['br']);
 const INLINE = new Set(['br', 'strong', 'b', 'em', 'i', 'a']);
@@ -54,7 +59,7 @@ function safeHref(raw) {
  * flattened to its text. Unbalanced tags are closed at the end.
  */
 export function rich(s) {
-  const input = String(s ?? '');
+  const input = strip(s);
   let out = '';
   let last = 0;
   const open = [];
@@ -89,7 +94,7 @@ export function rich(s) {
 
   out += esc(decode(input.slice(last)));
   while (open.length) out += `</${open.pop()}>`;
-  return out.replace(/\s*\n\s*/g, ' ').trim();
+  return out.replace(/\s+/g, ' ').trim();
 }
 
 /** Slug used for uploaded file names — never trust an editor's filename. */

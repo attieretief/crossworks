@@ -1,13 +1,15 @@
 /* Crossworks in-page editor.
    Loaded on demand from js/site.js (?edit, or Ctrl/Cmd+Shift+E). Visitors never
-   see it. The page's own markup is the editing surface: content.json is the
-   working copy, shared/page.mjs re-renders whenever something is added, moved or
-   removed, and Save posts the whole document to the Worker, which commits
-   content.json, any new images and a freshly rendered index.html. */
+   see it. The page itself is the editing surface: content.json is the working
+   copy, shared/page.mjs re-renders whenever something is added, moved or
+   removed, and Save posts the document to the Worker, which commits it. The
+   build workflow then rebuilds the pages. */
 
-import { render } from '../shared/page.mjs';
+import { renderHome, renderPost } from '../shared/page.mjs';
+import { slug } from '../shared/sanitize.mjs';
 
 const API = ((window.CROSSWORKS && window.CROSSWORKS.api) || '').replace(/\/$/, '');
+const BASE = window.CROSSWORKS_BASE || '';
 const SESSION_KEY = 'cw.session';
 const MAX_UPLOAD_BYTES = 18 * 1024 * 1024;   /* keep one save comfortably inside the Worker's limit */
 const MAX_EDGE = 1600;                        /* photos are downscaled before they leave the browser */
@@ -16,8 +18,9 @@ const state = {
   content: null,
   original: '',
   session: null,
+  page: null,           /* {kind:'home'} or {kind:'post', slug} */
   uploads: new Map(),   /* repo path -> data URL, sent on save */
-  previews: new Map(),  /* repo path -> object URL, shown until then */
+  previews: new Map(),  /* repo path -> data URL, shown until then */
   bar: null,
   status: null
 };
@@ -31,6 +34,11 @@ function setPath(obj, path, value) {
   const last = keys.pop();
   const target = keys.reduce((o, k) => o[k], obj);
   target[last] = value;
+}
+
+function splitIndex(path) {
+  const at = path.lastIndexOf('.');
+  return [path.slice(0, at), Number(path.slice(at + 1))];
 }
 
 const dirty = () => JSON.stringify(state.content) !== state.original || state.uploads.size > 0;
@@ -54,9 +62,8 @@ function say(message, kind = '') {
   state.status.className = 'cw-status ' + kind;
 }
 
-function button(label, title, onclick, cls = '') {
-  return el('button', { type: 'button', class: 'cw-btn ' + cls, title: title || label, onclick }, label);
-}
+const button = (label, title, onclick, cls = '') =>
+  el('button', { type: 'button', class: 'cw-btn ' + cls, title: title || label, onclick }, label);
 
 /* ── sign in ────────────────────────────────────────────────────────────── */
 
@@ -124,13 +131,13 @@ const refreshBar = () => { if (state.session) buildBar(); };
 
 /* ── images ─────────────────────────────────────────────────────────────── */
 
-function pickFiles({ multiple = false, accept = 'image/*' } = {}) {
+function pickFiles({ multiple = false } = {}) {
   return new Promise(resolve => {
-    const input = el('input', { type: 'file', accept, multiple, class: 'cw-file' });
-    input.addEventListener('change', () => {
-      resolve([...input.files]);
-      input.remove();
-    });
+    const input = el('input', { type: 'file', accept: 'image/*', multiple, class: 'cw-file' });
+    const done = files => { resolve(files); input.remove(); };
+    input.addEventListener('change', () => done([...input.files]));
+    /* closing the picker without choosing must not leave the editor waiting */
+    input.addEventListener('cancel', () => done([]));
     document.body.append(input);
     input.click();
   });
@@ -159,15 +166,14 @@ async function downscale(file) {
 }
 
 function repoPath(file) {
-  const stem = (file.name.replace(/\.[^.]+$/, '') || 'photo')
-    .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 48) || 'photo';
+  const stem = slug(file.name.replace(/\.[^.]+$/, ''), 'photo').slice(0, 48);
   const stamp = new Date().toISOString().slice(0, 10);
   return `img/uploads/${stamp}-${stem}-${Math.random().toString(36).slice(2, 7)}.jpg`;
 }
 
 async function queueImage(file) {
   const dataUrl = await downscale(file);
-  const bytes = Math.round(dataUrl.length * 0.75);
+  const bytes = dataUrl.length * 0.75;
   const queued = [...state.uploads.values()].reduce((n, d) => n + d.length * 0.75, 0);
   if (queued + bytes > MAX_UPLOAD_BYTES) throw new Error('too much');
   const path = repoPath(file);
@@ -175,6 +181,10 @@ async function queueImage(file) {
   state.previews.set(path, dataUrl);
   return path;
 }
+
+const tooMuch = err => err.message === 'too much'
+  ? 'That is as much as one save can carry — save these, then add the rest.'
+  : 'That file could not be read as a photo.';
 
 async function replaceImage(fieldPath) {
   const [file] = await pickFiles();
@@ -185,9 +195,7 @@ async function replaceImage(fieldPath) {
     say('');
     redraw();
   } catch (err) {
-    say(err.message === 'too much'
-      ? 'That is more than one save can carry — save what you have, then add the rest.'
-      : 'That file could not be read as a photo.', 'bad');
+    say(tooMuch(err), 'bad');
   }
 }
 
@@ -214,7 +222,7 @@ async function addProject(groupPath) {
   let image = 'img/hero.jpg';
   if (file) {
     say('Preparing the photo…');
-    try { image = await queueImage(file); say(''); } catch (_) { say('That photo could not be used.', 'bad'); }
+    try { image = await queueImage(file); say(''); } catch (err) { say(tooMuch(err), 'bad'); }
   }
   getPath(state.content, `${groupPath}.items`).push({
     id: newId('pr'),
@@ -242,35 +250,53 @@ async function addPhotos() {
       state.content.gallery.items.push({ id: newId('gal'), src: await queueImage(file), alt: '' });
       say('');
     } catch (err) {
-      say(err.message === 'too much'
-        ? 'That is as much as one save can carry — save these, then add the rest.'
-        : 'One file could not be read as a photo.', 'bad');
+      say(tooMuch(err), 'bad');
       break;
     }
   }
   redraw();
 }
 
-async function addIssue() {
-  const [file] = await pickFiles({ accept: 'application/pdf' });
-  if (!file) return;
-  if (file.size > MAX_UPLOAD_BYTES) return say('That PDF is too large to upload here.', 'bad');
-  const stem = file.name.replace(/\.[^.]+$/, '').replace(/[^A-Za-z0-9]+/g, '-').toLowerCase().slice(0, 48) || 'newsletter';
-  const path = `newsletters/${new Date().toISOString().slice(0, 10)}-${stem}.pdf`;
-  state.uploads.set(path, await readAsDataURL(file));
-  state.content.newsletter.issues.unshift({
+async function addPost() {
+  const title = (prompt('What is this letter called?', '') || '').trim();
+  if (!title) return;
+
+  const [file] = await pickFiles();
+  let image = 'img/hero.jpg';
+  if (file) {
+    say('Preparing the photo…');
+    try { image = await queueImage(file); say(''); } catch (err) { say(tooMuch(err), 'bad'); }
+  }
+
+  /* the slug is fixed now, so renaming the letter later never breaks its link */
+  const taken = new Set(state.content.news.posts.map(p => p.slug));
+  let stem = slug(title, 'letter');
+  for (let n = 2; taken.has(stem); n++) stem = `${slug(title, 'letter')}-${n}`;
+
+  state.content.news.posts.unshift({
     id: newId('nl'),
+    slug: stem,
     date: new Date().toLocaleDateString('en-ZA', { month: 'long', year: 'numeric' }),
-    title: 'New newsletter',
-    file: path
+    title,
+    summary: 'One or two sentences that make someone want to read the rest.',
+    image,
+    alt: title,
+    body: ['Write the letter here.']
   });
   redraw();
 }
 
-/* ── editing affordances ────────────────────────────────────────────────── */
+function addParagraph(listPath) {
+  getPath(state.content, listPath).push('');
+  redraw();
+  const fresh = document.querySelector(`[data-edit="${listPath}.${getPath(state.content, listPath).length - 1}"]`);
+  fresh?.focus();
+}
+
+/* ── per-item controls ──────────────────────────────────────────────────── */
 
 const TOOLS = {
-  project: (path) => {
+  project: path => {
     const [listPath, index] = splitIndex(path);
     const card = getPath(state.content, path);
     return [
@@ -287,7 +313,7 @@ const TOOLS = {
       button('✕', 'Remove this project', () => remove(listPath, index, 'project'), 'cw-danger')
     ];
   },
-  group: (path) => {
+  group: path => {
     const [listPath, index] = splitIndex(path);
     return [
       button('↑', 'Move this country up', () => move(listPath, index, -1)),
@@ -296,7 +322,7 @@ const TOOLS = {
       button('✕', 'Remove this country and its projects', () => remove(listPath, index, 'country and every project in it'), 'cw-danger')
     ];
   },
-  photo: (path) => {
+  photo: path => {
     const [listPath, index] = splitIndex(path);
     return [
       button('↑', 'Move earlier', () => move(listPath, index, -1)),
@@ -304,22 +330,32 @@ const TOOLS = {
       button('✕', 'Remove this photo', () => remove(listPath, index, 'photo'), 'cw-danger')
     ];
   },
-  issue: (path) => {
+  post: path => {
     const [listPath, index] = splitIndex(path);
-    return [button('✕', 'Remove this newsletter', () => remove(listPath, index, 'newsletter'), 'cw-danger')];
+    return [
+      button('↑', 'Move this letter up', () => move(listPath, index, -1)),
+      button('↓', 'Move this letter down', () => move(listPath, index, 1)),
+      button('✕', 'Remove this letter and its page', () => remove(listPath, index, 'letter'), 'cw-danger')
+    ];
+  },
+  para: path => {
+    const [listPath, index] = splitIndex(path);
+    return [
+      button('↑', 'Move this paragraph up', () => move(listPath, index, -1)),
+      button('↓', 'Move this paragraph down', () => move(listPath, index, 1)),
+      button('✕', 'Remove this paragraph', () => remove(listPath, index, 'paragraph'), 'cw-danger')
+    ];
   }
 };
 
-function splitIndex(path) {
-  const at = path.lastIndexOf('.');
-  return [path.slice(0, at), Number(path.slice(at + 1))];
-}
+const ADDERS = [
+  { test: p => p === 'projects.groups', make: () => button('+ Add a country', 'Add another country heading', addGroup, 'cw-add') },
+  { test: p => p === 'gallery.items', make: () => button('+ Add photos', 'Upload one or more photos', addPhotos, 'cw-add') },
+  { test: p => p === 'news.posts', make: () => button('+ Write a letter', 'Start a new letter', addPost, 'cw-add') },
+  { test: p => /^news\.posts\.\d+\.body$/.test(p), make: p => button('+ Paragraph', 'Add another paragraph', () => addParagraph(p), 'cw-add cw-add-sm') }
+];
 
-const ADDERS = {
-  'projects.groups': () => button('+ Add a country', 'Add another country heading', addGroup, 'cw-add'),
-  'gallery.items': () => button('+ Add photos', 'Upload one or more photos', addPhotos, 'cw-add'),
-  'newsletter.issues': () => button('+ Add a newsletter', 'Upload a newsletter PDF', addIssue, 'cw-add')
-};
+/* ── editing affordances ────────────────────────────────────────────────── */
 
 function wire() {
   document.querySelectorAll('[data-edit]').forEach(node => {
@@ -327,7 +363,6 @@ function wire() {
     if (node.hasAttribute('data-image')) {
       node.classList.add('cw-img');
       node.addEventListener('click', e => { e.preventDefault(); replaceImage(path); });
-      node.addEventListener('dblclick', e => e.preventDefault());
       return;
     }
     node.contentEditable = 'true';
@@ -343,10 +378,9 @@ function wire() {
     });
   });
 
-  /* photos need an alt line for screen readers and for search */
+  /* photos need a description for people who cannot see them */
   document.querySelectorAll('[data-image]').forEach(img => {
-    const base = img.dataset.edit.replace(/\.(image|src)$/, '');
-    const altPath = `${base}.alt`;
+    const altPath = img.dataset.edit.replace(/\.(image|src)$/, '.alt');
     if (getPath(state.content, altPath) === undefined) return;
     img.title = 'Click to replace this photo · Shift-click to describe it';
     img.addEventListener('click', e => {
@@ -369,13 +403,15 @@ function wire() {
   });
 
   document.querySelectorAll('[data-list]').forEach(node => {
-    const add = ADDERS[node.dataset.list];
-    if (add) node.after(el('div', { class: 'cw-add-row' }, add()));
+    const path = node.dataset.list;
+    const adder = ADDERS.find(a => a.test(path));
+    if (adder) node.after(el('div', { class: 'cw-add-row' }, adder.make(path)));
   });
 
-  /* an empty archive is hidden for visitors — an editor still has to reach it */
-  document.querySelectorAll('.issues.is-empty, .need.is-empty').forEach(n => {
+  /* blocks a visitor never sees, but an editor still has to reach */
+  document.querySelectorAll('.posts.is-empty, .need.is-empty').forEach(n => {
     n.hidden = false;
+    n.classList.remove('is-empty');
     n.classList.add('cw-revealed');
   });
 
@@ -393,19 +429,62 @@ function wrapImage(img) {
   return wrap;
 }
 
+/** On the home page, each letter gets its text opened up underneath its card,
+    so the whole site is written from one screen. */
+function openLetters() {
+  if (state.page.kind !== 'home') return;
+  document.querySelectorAll('.post-card[data-item]').forEach(card => {
+    const path = card.dataset.item;
+    const post = getPath(state.content, path);
+    const list = el('div', { 'data-list': `${path}.body` },
+      post.body.map((para, i) => {
+        const p = el('p', {
+          'data-item': `${path}.body.${i}`,
+          'data-kind': 'para',
+          'data-edit': `${path}.body.${i}`,
+          'data-rich': '1'
+        });
+        p.innerHTML = para;
+        return p;
+      }));
+    card.append(el('div', { class: 'cw-panel', contenteditable: 'false' },
+      el('p', { class: 'cw-panel-title' }, 'The letter itself'),
+      list));
+  });
+}
+
 /* ── render ─────────────────────────────────────────────────────────────── */
+
+function currentPostIndex() {
+  return state.content.news.posts.findIndex(p => slug(p.slug || p.title, p.id) === state.page.slug);
+}
 
 function redraw() {
   const scroll = window.scrollY;
-  const doc = new DOMParser().parseFromString(render(state.content), 'text/html');
+
+  let html;
+  if (state.page.kind === 'post') {
+    const index = currentPostIndex();
+    if (index === -1) {
+      say('This letter has been removed. Save, then go back to the home page.', 'bad');
+      return;
+    }
+    html = renderPost(state.content, index);
+  } else {
+    html = renderHome(state.content);
+  }
+
+  const doc = new DOMParser().parseFromString(html, 'text/html');
   document.body.innerHTML = doc.body.innerHTML;
 
-  /* freshly uploaded files are not on the server yet — show them from memory */
+  /* freshly uploaded photos are not on the server yet — show them from memory */
   state.previews.forEach((dataUrl, path) => {
-    document.querySelectorAll(`img[src="${CSS.escape(path)}"]`).forEach(img => { img.src = dataUrl; });
+    document.querySelectorAll(`img[src="${CSS.escape(path)}"], img[src="${CSS.escape(BASE + path)}"]`)
+      .forEach(img => { img.src = dataUrl; });
   });
 
   document.body.classList.add('cw-editing');
+  openLetters();
   wire();
   buildBar();
   window.scrollTo(0, scroll);
@@ -434,7 +513,7 @@ async function onSave() {
     state.uploads.clear();
     state.original = JSON.stringify(state.content);
     buildBar();
-    say('Saved. The live site updates in about a minute.', 'good');
+    say('Saved. The live site updates in a minute or two.', 'good');
   } catch (err) {
     buildBar();
     say(err.message, 'bad');
@@ -444,12 +523,16 @@ async function onSave() {
 /* ── start ──────────────────────────────────────────────────────────────── */
 
 async function startEditing() {
-  const res = await fetch('content.json', { cache: 'no-store' });
+  const res = await fetch(BASE + 'content.json', { cache: 'no-store' });
   state.content = await res.json();
   state.original = JSON.stringify(state.content);
   redraw();
-  say(`Click any text to change it. Click a photo to replace it.`);
+  say('Click any text to change it. Click a photo to replace it.');
 }
+
+state.page = document.body.classList.contains('post-page')
+  ? { kind: 'post', slug: location.pathname.replace(/\/(index\.html)?$/, '').split('/').pop() }
+  : { kind: 'home' };
 
 addEventListener('beforeunload', e => {
   if (state.session && dirty()) e.preventDefault();

@@ -3,11 +3,11 @@
    not described here is dropped, so a tampered-with request cannot invent paths,
    inject markup or grow the file without bound. */
 
-import { plain, rich } from './sanitize.mjs';
+import { plain, rich, slug } from './sanitize.mjs';
 
 const LIMITS = {
   short: 200, medium: 600, long: 2200,
-  pillars: 6, groups: 12, items: 12, gallery: 60, issues: 40
+  pillars: 6, groups: 12, items: 12, gallery: 60, posts: 60, paragraphs: 80
 };
 
 const PATH_OK = /^(img|newsletters)\/[A-Za-z0-9][A-Za-z0-9._/-]{0,120}$/;
@@ -28,11 +28,23 @@ const id = (v, prefix, i) => {
   return s || `${prefix}-${i}`;
 };
 
+/** Two posts must never resolve to the same URL, or one file overwrites the other. */
+function uniqueSlugs(posts) {
+  const seen = new Set();
+  for (const post of posts) {
+    let candidate = post.slug;
+    for (let n = 2; seen.has(candidate); n++) candidate = `${post.slug}-${n}`;
+    post.slug = candidate;
+    seen.add(candidate);
+  }
+  return posts;
+}
+
 export function clean(input) {
   const c = input && typeof input === 'object' ? input : {};
   const src = key => (c[key] && typeof c[key] === 'object' ? c[key] : {});
   const meta = src('meta'), hero = src('hero'), who = src('who'), projects = src('projects');
-  const gallery = src('gallery'), newsletter = src('newsletter'), give = src('give');
+  const gallery = src('gallery'), news = src('news'), give = src('give');
   const contact = src('contact'), footer = src('footer');
 
   return {
@@ -87,19 +99,24 @@ export function clean(input) {
         alt: str(g?.alt, LIMITS.short)
       }))
     },
-    newsletter: {
-      overline: str(newsletter.overline, LIMITS.short),
-      title: str(newsletter.title, LIMITS.short),
-      blurb: html(newsletter.blurb, LIMITS.long),
-      buttonLabel: str(newsletter.buttonLabel, 40) || 'Sign me up',
-      successMessage: str(newsletter.successMessage, LIMITS.short) || 'Thank you.',
-      archiveTitle: str(newsletter.archiveTitle, LIMITS.short) || 'Past issues',
-      issues: list(newsletter.issues, LIMITS.issues, (n, i) => ({
-        id: id(n?.id, 'nl', i),
-        date: str(n?.date, 60),
-        title: str(n?.title, LIMITS.short),
-        file: asset(n?.file, '')
-      })).filter(n => n.file)
+    news: {
+      overline: str(news.overline, LIMITS.short),
+      title: str(news.title, LIMITS.short),
+      blurb: html(news.blurb, LIMITS.long),
+      emptyNote: str(news.emptyNote, LIMITS.short),
+      posts: uniqueSlugs(list(news.posts, LIMITS.posts, (n, i) => {
+        const title = str(n?.title, LIMITS.short) || 'Untitled';
+        return {
+          id: id(n?.id, 'nl', i),
+          slug: slug(n?.slug || title, `post-${i + 1}`),
+          date: str(n?.date, 60),
+          title,
+          summary: html(n?.summary, LIMITS.long),
+          image: asset(n?.image, 'img/hero.jpg'),
+          alt: str(n?.alt, LIMITS.short),
+          body: list(n?.body, LIMITS.paragraphs, para => html(para, LIMITS.long)).filter(Boolean)
+        };
+      }))
     },
     give: {
       overline: str(give.overline, LIMITS.short),
@@ -132,6 +149,6 @@ export function referencedAssets(c) {
     c.hero.image,
     ...c.projects.groups.flatMap(g => g.items.map(p => p.image)),
     ...c.gallery.items.map(g => g.src),
-    ...c.newsletter.issues.map(n => n.file)
+    ...c.news.posts.map(n => n.image)
   ].filter(Boolean));
 }

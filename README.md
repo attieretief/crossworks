@@ -12,11 +12,14 @@ work in South Africa, Zambia and Angola. Live at
 ## How the page is put together
 
 `content.json` holds every word and photo reference. `shared/page.mjs` turns it
-into `index.html`. Both are committed, and **`index.html` is what GitHub Pages
-serves** — the site is still plain static HTML with no build step at request
-time and no JavaScript needed to read it.
+into `index.html` plus one page per news letter under `news/`. All of it is
+committed, and **the built HTML is what GitHub Pages serves** — plain static
+files, no build step at request time, no JavaScript needed to read the site.
 
-After editing `content.json` by hand:
+The rebuild runs in GitHub Actions (`.github/workflows/build.yml`) whenever
+`content.json`, `build.mjs` or `shared/` changes, so the pages can never drift
+from the content they came from, and a template change is an ordinary commit
+rather than a redeploy. To rebuild locally:
 
 ```bash
 node build.mjs
@@ -38,11 +41,15 @@ the screen:
   has **+ Add a country**.
 - **Gallery** — **+ Add photos** takes several at once; each tile can be moved or
   removed.
-- **Newsletter** — **+ Add a newsletter** uploads a PDF and lists it under "Past
-  issues"; visitors sign up with the form above it.
+- **News** — **+ Write a letter** starts a post. Its title, date, photo and
+  summary sit on the card; the text itself opens underneath, a paragraph at a
+  time. Each letter gets its own page at `/news/<name>/`, so it has a link worth
+  sharing. There is no sign-up list and nothing is emailed — the letters live on
+  the site.
 
 **Save changes** commits everything in one go, credited to whoever is signed in.
-GitHub Pages rebuilds in about a minute. Nothing is live until Save is pressed,
+The build workflow then rebuilds the pages and GitHub Pages publishes them —
+a minute or two end to end. Nothing is live until Save is pressed,
 and **Discard** throws the session away.
 
 The editor is only downloaded when it is asked for — an ordinary visitor never
@@ -58,12 +65,14 @@ dormant.
 ## Layout
 
 ```
-content.json      every editable word and photo reference
-shared/page.mjs   content.json → HTML (used by the build and by the Worker)
-shared/schema.mjs the allowed shape of content.json; the gate on every save
+content.json       every editable word and photo reference
+shared/page.mjs    content.json → the home page and one page per letter
+shared/schema.mjs  the allowed shape of content.json; the gate on every save
 shared/sanitize.mjs
-build.mjs         node build.mjs → index.html
-index.html        generated, committed, served
-js/editor.js      the in-page editor (loaded on demand)
-worker/           the Cloudflare Worker
+build.mjs          node build.mjs → index.html + news/
+index.html         generated, committed, served
+news/<name>/       one letter per directory, generated the same way
+js/editor.js       the in-page editor (loaded on demand)
+worker/            the Cloudflare Worker: passphrase check + commit
+.github/workflows/build.yml
 ```
