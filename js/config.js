@@ -1,6 +1,6 @@
-/* Public settings. No secrets here — the Worker holds those.
-   Set `api` to the Worker's URL once it is deployed (see worker/README.md).
-   Until it is set, the editor stays dormant. */
+/* Public settings. No secrets here — the editor's access key lives only in the
+   browser of whoever pastes it, and never in this repo. */
 window.CROSSWORKS = {
-  api: ''
+  repo: 'attieretief/crossworks',
+  branch: 'main'
 };

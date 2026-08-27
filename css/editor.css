@@ -14,9 +14,10 @@ body.cw-editing{padding-bottom:96px}
 .cw-title{font-family:"Oswald",Impact,sans-serif;text-transform:uppercase;letter-spacing:.14em;font-size:12px;
   color:#E6AF0E;margin-right:4px}
 .cw-signin{display:flex;gap:8px;align-items:center;margin:0}
-.cw-bar input[type=password]{font:inherit;padding:8px 10px;border:1px solid rgba(237,231,221,.28);
-  background:rgba(255,255,255,.06);color:#fff;min-width:180px}
-.cw-bar input[type=password]:focus{outline:2px solid #E6AF0E;outline-offset:-1px}
+.cw-bar input{font:inherit;padding:8px 10px;border:1px solid rgba(237,231,221,.28);
+  background:rgba(255,255,255,.06);color:#fff;min-width:140px}
+.cw-bar input[type=password]{min-width:200px}
+.cw-bar input:focus{outline:2px solid #E6AF0E;outline-offset:-1px}
 .cw-btn{font:inherit;font-weight:600;padding:8px 12px;background:rgba(237,231,221,.1);color:#EDE7DD;
   border:1px solid rgba(237,231,221,.22);cursor:pointer;transition:.15s}
 .cw-btn:hover:not(:disabled){background:rgba(237,231,221,.2);border-color:rgba(230,175,14,.6)}

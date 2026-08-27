@@ -1,4 +1,4 @@
-/* Shared by the Node build and the Cloudflare Worker.
+/* Shared by the Node build and the in-page editor.
    Editors type into contenteditable elements, so whatever comes back has to be
    treated as hostile: decode first, escape everything, then re-admit a very small
    set of inline tags. */

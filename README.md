@@ -27,10 +27,9 @@ node build.mjs
 
 ## Editing from the site
 
-Vicki and Reynold edit the live page itself — no admin screen, no GitHub
-account. Open <https://crossworksmissions.org/?edit> (or press Ctrl/Cmd+Shift+E
-on any page), enter the editor passphrase, and a bar appears at the bottom of
-the screen:
+Vicki and Reynold edit the live page itself — no admin screen, no CMS. Open
+<https://crossworksmissions.org/?edit> (or press Ctrl/Cmd+Shift+E on any page),
+put in a name and an access key, and a bar appears at the bottom of the screen:
 
 - **Text** — click any line and type. Headings, body copy, the bank details, the
   verses, the contact address.
@@ -48,18 +47,37 @@ the screen:
   the site.
 
 **Save changes** commits everything in one go, credited to whoever is signed in.
-The build workflow then rebuilds the pages and GitHub Pages publishes them —
-a minute or two end to end. Nothing is live until Save is pressed,
+The build workflow then rebuilds the pages and GitHub Pages publishes them — a
+minute or two end to end. The key is remembered on that browser until **Sign
+out**, so it is pasted once, not daily. Nothing is live until Save is pressed,
 and **Discard** throws the session away.
 
 The editor is only downloaded when it is asked for — an ordinary visitor never
 loads a byte of it.
 
-## The service behind it
+## Access keys
 
-Signing in and saving run through one Cloudflare Worker in `worker/` — set-up
-and deploy steps are in [worker/README.md](worker/README.md). Until its URL is
-filled into `js/config.js`, the editor stays dormant and says so.
+There is no server. The editor commits to this repo directly from the browser,
+using a **fine-grained GitHub token** as the access key — so GitHub is the only
+thing the site depends on.
+
+To issue one, at
+[Fine-grained tokens → new](https://github.com/settings/personal-access-tokens/new):
+
+- **Repository access** — only `attieretief/crossworks`
+- **Permissions** — `Contents: Read and write`, and nothing else
+- **Expiration** — no expiration is fine, or a date you will diarise
+
+Issue one key per person, so revoking one does not lock the other out. Send it
+the way you would send a password, and it goes in the **Access key** box once.
+
+Leaving **Workflows** off matters: without it the key can change the site's
+words and photos but cannot add or edit anything under `.github/workflows/`,
+so it can never be turned into a way of running code. To withdraw someone's
+access, delete their token on that page — it stops working immediately.
+
+The key never touches this repo. It lives in that person's browser until they
+press **Sign out**.
 
 ## Layout
 
@@ -71,7 +89,8 @@ shared/sanitize.mjs
 build.mjs          node build.mjs → index.html + news/
 index.html         generated, committed, served
 news/<name>/       one letter per directory, generated the same way
+shared/github.mjs  the commit itself — the only thing that talks to GitHub
 js/editor.js       the in-page editor (loaded on demand)
-worker/            the Cloudflare Worker: passphrase check + commit
 .github/workflows/build.yml
+test.mjs           node test.mjs
 ```

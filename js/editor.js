@@ -2,16 +2,18 @@
    Loaded on demand from js/site.js (?edit, or Ctrl/Cmd+Shift+E). Visitors never
    see it. The page itself is the editing surface: content.json is the working
    copy, shared/page.mjs re-renders whenever something is added, moved or
-   removed, and Save posts the document to the Worker, which commits it. The
-   build workflow then rebuilds the pages. */
+   removed, and Save commits straight to GitHub with the editor's own access
+   key. The build workflow then rebuilds the pages. */
 
 import { renderHome, renderPost } from '../shared/page.mjs';
 import { slug } from '../shared/sanitize.mjs';
+import { clean, referencedAssets } from '../shared/schema.mjs';
+import { github } from '../shared/github.mjs';
 
-const API = ((window.CROSSWORKS && window.CROSSWORKS.api) || '').replace(/\/$/, '');
+const CONFIG = window.CROSSWORKS || {};
 const BASE = window.CROSSWORKS_BASE || '';
-const SESSION_KEY = 'cw.session';
-const MAX_UPLOAD_BYTES = 18 * 1024 * 1024;   /* keep one save comfortably inside the Worker's limit */
+const SESSION_KEY = 'cw.key';
+const MAX_UPLOAD_BYTES = 18 * 1024 * 1024;   /* one save's worth of photos, comfortably under GitHub's blob limit */
 const MAX_EDGE = 1600;                        /* photos are downscaled before they leave the browser */
 
 const state = {
@@ -74,35 +76,36 @@ function buildBar() {
   const bar = el('div', { class: 'cw-bar', role: 'region', 'aria-label': 'Page editor' });
 
   if (!state.session) {
-    const input = el('input', { type: 'password', placeholder: 'Editor passphrase', autocomplete: 'current-password' });
+    const name = el('input', { type: 'text', placeholder: 'Your name', autocomplete: 'name' });
+    const key = el('input', { type: 'password', placeholder: 'Access key', autocomplete: 'current-password' });
+
     const submit = async () => {
-      if (!API) return say('No editor service configured yet (js/config.js).', 'bad');
-      say('Checking…');
+      if (!name.value.trim()) return say('Put your name in, so the history shows who changed what.', 'bad');
+      if (!key.value.trim()) return say('Paste the access key Attie gave you.', 'bad');
+      say('Checking the key…');
       try {
-        const res = await fetch(API + '/auth', {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ passphrase: input.value })
-        });
-        if (!res.ok) throw new Error('rejected');
-        state.session = await res.json();
-        sessionStorage.setItem(SESSION_KEY, JSON.stringify(state.session));
+        await github({ token: key.value.trim(), repo: CONFIG.repo }).check();
+        state.session = { name: name.value.trim(), token: key.value.trim() };
+        localStorage.setItem(SESSION_KEY, JSON.stringify(state.session));
         await startEditing();
-      } catch (_) {
-        say('That passphrase was not accepted.', 'bad');
-        input.select();
+      } catch (err) {
+        say(err.status === 401 ? 'That key was not accepted.'
+          : err.status === 403 ? 'That key cannot change this site.'
+          : 'Could not reach GitHub just now.', 'bad');
+        key.select();
       }
     };
+
     const form = el('form', { class: 'cw-signin', onsubmit: e => { e.preventDefault(); submit(); } },
-      input,
-      el('button', { type: 'submit', class: 'cw-btn cw-primary' }, 'Sign in'));
+      name, key,
+      el('button', { type: 'submit', class: 'cw-btn cw-primary' }, 'Start editing'));
     bar.append(
       el('span', { class: 'cw-title' }, 'Edit this page'),
       form,
       button('✕', 'Close the editor', () => bar.remove()),
       state.status
     );
-    setTimeout(() => input.focus(), 0);
+    setTimeout(() => name.focus(), 0);
   } else {
     const save = button('Save changes', 'Publish these changes', onSave, 'cw-primary');
     save.disabled = !dirty();
@@ -114,9 +117,9 @@ function buildBar() {
         location.reload();
       }),
       save,
-      button('Sign out', 'Sign out', () => {
+      button('Sign out', 'Forget the access key on this device', () => {
         if (dirty() && !confirm('You have unsaved changes. Sign out anyway?')) return;
-        sessionStorage.removeItem(SESSION_KEY);
+        localStorage.removeItem(SESSION_KEY);
         location.reload();
       }),
       state.status
@@ -497,26 +500,32 @@ async function onSave() {
   say('Saving…');
   state.bar.querySelectorAll('button').forEach(b => { b.disabled = true; });
 
+  const content = clean(state.content);
+  const wanted = referencedAssets(content);
+  const files = [{ path: 'content.json', content: JSON.stringify(content, null, 2) + '\n' }];
+  for (const [path, dataUrl] of state.uploads) {
+    if (!wanted.has(path)) continue;            /* dropped before it was saved */
+    files.push({ path, base64: dataUrl.slice(dataUrl.indexOf(',') + 1) });
+  }
+
   try {
-    const res = await fetch(API + '/save', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', authorization: `Bearer ${state.session.token}` },
-      body: JSON.stringify({
-        content: state.content,
-        uploads: [...state.uploads].map(([path, dataUrl]) => ({ path, dataUrl }))
-      })
+    await github({ token: state.session.token, repo: CONFIG.repo }).commit({
+      branch: CONFIG.branch || 'main',
+      files,
+      message: `Site edit by ${state.session.name}`,
+      author: { name: state.session.name, email: CONFIG.commitEmail || 'info@crossworksmissions.org' }
     });
-    const body = await res.json().catch(() => ({}));
-    if (res.status === 401) throw new Error('Your session has expired — sign in again.');
-    if (!res.ok) throw new Error(body.error || 'The save did not go through.');
 
     state.uploads.clear();
-    state.original = JSON.stringify(state.content);
-    buildBar();
+    state.content = content;
+    state.original = JSON.stringify(content);
+    redraw();
     say('Saved. The live site updates in a minute or two.', 'good');
   } catch (err) {
     buildBar();
-    say(err.message, 'bad');
+    say(err.status === 401 || err.status === 403
+      ? 'Your access key is no longer accepted — ask Attie for a new one.'
+      : 'GitHub would not take the change. Try again in a moment.', 'bad');
   }
 }
 
@@ -539,8 +548,8 @@ addEventListener('beforeunload', e => {
 });
 
 try {
-  state.session = JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null');
-  if (state.session && state.session.expires < Date.now()) state.session = null;
+  state.session = JSON.parse(localStorage.getItem(SESSION_KEY) || 'null');
+  if (!state.session?.token || !state.session?.name) state.session = null;
 } catch (_) {
   state.session = null;
 }
