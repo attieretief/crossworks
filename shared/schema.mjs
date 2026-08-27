@@ -10,7 +10,7 @@ const LIMITS = {
   pillars: 6, groups: 12, items: 12, gallery: 60, posts: 60, paragraphs: 80
 };
 
-const PATH_OK = /^(img|newsletters)\/[A-Za-z0-9][A-Za-z0-9._/-]{0,120}$/;
+const PATH_OK = /^img\/[A-Za-z0-9][A-Za-z0-9._/-]{0,120}$/;
 const NO_TRAVERSAL = s => !s.includes('..') && !s.includes('//');
 
 const str = (v, max) => plain(v).slice(0, max);

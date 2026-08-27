@@ -108,6 +108,6 @@ const pages = renderAll(clean({ ...content, news: { ...content.news, posts: save
 check('a page is built per letter', pages.length === 3 && pages[1] === 'news/kalabo/index.html', pages.join(' '));
 
 check('CORS origin echoed', res.headers.get('access-control-allow-origin') === 'https://crossworksmissions.org');
-check('unknown route refused', (await call('subscribe', { method: 'POST', body: '{}' })).status === 404);
+check('unknown route refused', (await call('anything-else', { method: 'POST', body: '{}' })).status === 404);
 
 process.exit(failures ? 1 : 0);

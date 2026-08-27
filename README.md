@@ -57,10 +57,9 @@ loads a byte of it.
 
 ## The service behind it
 
-Editing, uploads and newsletter sign-ups run through one Cloudflare Worker in
-`worker/` — set-up and deploy steps are in [worker/README.md](worker/README.md).
-Until its URL is filled into `js/config.js`, the editor and the sign-up form stay
-dormant.
+Signing in and saving run through one Cloudflare Worker in `worker/` — set-up
+and deploy steps are in [worker/README.md](worker/README.md). Until its URL is
+filled into `js/config.js`, the editor stays dormant and says so.
 
 ## Layout
 
