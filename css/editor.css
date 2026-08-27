@@ -1,8 +1,18 @@
 /* Loaded only when someone opens the editor (js/site.js). Nothing here reaches
    an ordinary visitor. */
 
-body.cw-editing [data-reveal]{opacity:1 !important;transform:none !important}
-body.cw-editing{padding-bottom:96px}
+body.cw-editing [data-reveal],body.cw-preview [data-reveal]{opacity:1 !important;transform:none !important}
+body.cw-editing,body.cw-preview{padding-bottom:96px}
+
+/* Preview: the page exactly as a visitor gets it. Every trace of the editor is
+   off, so what they are looking at is the real thing. */
+body.cw-preview .cw-tools,
+body.cw-preview .cw-add-row,
+body.cw-preview .cw-panel{display:none !important}
+body.cw-preview .cw-field,
+body.cw-preview .cw-img{outline:none !important;background:none !important;cursor:auto}
+body.cw-preview .posts.is-empty,
+body.cw-preview .need.is-empty{display:none}
 .cw-file{position:fixed;left:-9999px;width:1px;height:1px}
 
 /* the floater */
@@ -28,6 +38,8 @@ body.cw-editing{padding-bottom:96px}
 .cw-status{flex:1 0 100%;margin:2px 0 0;font-size:13px;color:#B7AC9B;min-height:1.1em}
 .cw-status.bad{color:#F2A08E}
 .cw-status.good{color:#B9E39B}
+.cw-link{color:#E6AF0E;font-weight:600;text-decoration:underline;text-underline-offset:3px;white-space:nowrap}
+.cw-link:hover{color:#fff}
 
 /* editable text */
 .cw-field{outline:1px dashed transparent;outline-offset:4px;transition:outline-color .15s ease;border-radius:2px}

@@ -60,4 +60,6 @@ try {
   console.log('\n' + (stat || 'Nothing changed in the site itself.'));
 } catch (_) { /* not a git checkout, or git is unhappy — the files are written either way */ }
 
-console.log(`\nLook it over, then:  git add -A && git commit -m "Site edit by ${doc.editor || 'an editor'}" && git push\n`);
+if (!process.env.CI) {
+  console.log(`\nLook it over, then:  git add -A && git commit -m "Site edit by ${doc.editor || 'an editor'}" && git push\n`);
+}

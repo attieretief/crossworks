@@ -12,6 +12,7 @@ import { pack } from '../shared/handover.mjs';
 
 const BASE = window.CROSSWORKS_BASE || '';
 const DRAFT_KEY = 'cw.draft';
+const LETTERBOX = 'https://github.com/attieretief/crossworks/upload/main/handover';
 const MAX_UPLOAD_BYTES = 18 * 1024 * 1024;   /* one save's worth of photos, comfortably under GitHub's blob limit */
 const MAX_EDGE = 1600;                        /* photos are downscaled before they leave the browser */
 
@@ -19,7 +20,9 @@ const state = {
   content: null,
   original: '',
   editor: '',           /* whoever is at the keyboard, for the handover file */
-  page: null,           /* {kind:'home'} or {kind:'post', slug} */
+  page: null,           /* the document they opened: {kind:'home'} or {kind:'post', slug} */
+  view: null,           /* what is on screen — preview can move this without navigating */
+  preview: false,
   uploads: new Map(),   /* repo path -> data URL, sent on save */
   previews: new Map(),  /* repo path -> data URL, shown until then */
   bar: null,
@@ -78,20 +81,31 @@ function buildBar() {
 
   const bar = el('div', { class: 'cw-bar', role: 'region', 'aria-label': 'Page editor' });
   bar.dataset.dirty = dirty() ? '1' : '';
-  bar.append(
-    el('span', { class: 'cw-title' }, 'Editing'),
-    button('Start again', 'Throw away every change and go back to what is on the site', () => {
-      if (dirty() && !confirm('Throw away every change you have made?')) return;
-      localStorage.removeItem(DRAFT_KEY);
-      location.reload();
-    }),
-    download,
-    button('✕', 'Close the editor', () => {
-      if (dirty() && !confirm('Close the editor? Your changes stay saved on this computer.')) return;
-      location.href = location.pathname;
-    }),
-    state.status
-  );
+
+  if (state.preview) {
+    bar.append(
+      el('span', { class: 'cw-title' }, 'Preview'),
+      button('← Back to editing', 'Carry on making changes', () => setPreview(false), 'cw-primary'),
+      download,
+      state.status
+    );
+  } else {
+    bar.append(
+      el('span', { class: 'cw-title' }, 'Editing'),
+      button('Preview', 'See the page exactly as a visitor will', () => setPreview(true)),
+      button('Start again', 'Throw away every change and go back to what is on the site', () => {
+        if (dirty() && !confirm('Throw away every change you have made?')) return;
+        localStorage.removeItem(DRAFT_KEY);
+        location.reload();
+      }),
+      download,
+      button('✕', 'Close the editor', () => {
+        if (dirty() && !confirm('Close the editor? Your changes stay saved on this computer.')) return;
+        location.href = location.pathname;
+      }),
+      state.status
+    );
+  }
 
   document.body.append(bar);
   state.bar = bar;
@@ -340,6 +354,8 @@ const ADDERS = [
 /* ── editing affordances ────────────────────────────────────────────────── */
 
 function wire() {
+  if (state.preview) return wirePreview();
+
   document.querySelectorAll('[data-edit]').forEach(node => {
     const path = node.dataset.edit;
     if (node.hasAttribute('data-image')) {
@@ -403,6 +419,43 @@ function wire() {
   }, true);
 }
 
+/** In preview the page is exactly what a visitor gets, so links have to work —
+    including to a letter whose page does not exist on the server yet. */
+function wirePreview() {
+  document.addEventListener('click', e => {
+    const link = e.target.closest('a[href]');
+    if (!link || link.closest('.cw-bar')) return;
+
+    const href = link.getAttribute('href') || '';
+    if (href.startsWith('#')) return;                       /* anchors scroll as normal */
+
+    e.preventDefault();
+    const post = state.content.news.posts.findIndex(p => href.endsWith(`news/${slug(p.slug || p.title, p.id)}/`));
+    if (post !== -1) return show({ kind: 'post', slug: state.content.news.posts[post].slug });
+    if (/(^|\/)(index\.html)?(#|$)/.test(href) || href.includes('#news')) {
+      show({ kind: 'home' });
+      if (href.includes('#')) setTimeout(() => document.getElementById(href.split('#')[1])?.scrollIntoView(), 0);
+      return;
+    }
+    say('That link works on the real site — here it would take you off the preview.');
+  }, true);
+}
+
+function show(view) {
+  state.view = view;
+  redraw();
+  window.scrollTo(0, 0);
+}
+
+function setPreview(on) {
+  state.preview = on;
+  if (!on) state.view = state.page;      /* editing always happens on the page they opened */
+  show(state.view);
+  say(on
+    ? 'This is exactly what a visitor sees. Links work, so you can read a letter right through.'
+    : 'Click any text to change it. Click a photo to replace it.');
+}
+
 /** Gallery tiles are bare <img>; give them a positioned parent to hang tools on. */
 function wrapImage(img) {
   const wrap = el('figure', { class: 'cw-imgwrap' });
@@ -414,7 +467,7 @@ function wrapImage(img) {
 /** On the home page, each letter gets its text opened up underneath its card,
     so the whole site is written from one screen. */
 function openLetters() {
-  if (state.page.kind !== 'home') return;
+  if (state.preview || state.view.kind !== 'home') return;
   document.querySelectorAll('.post-card[data-item]').forEach(card => {
     const path = card.dataset.item;
     const post = getPath(state.content, path);
@@ -438,22 +491,23 @@ function openLetters() {
 /* ── render ─────────────────────────────────────────────────────────────── */
 
 function currentPostIndex() {
-  return state.content.news.posts.findIndex(p => slug(p.slug || p.title, p.id) === state.page.slug);
+  return state.content.news.posts.findIndex(p => slug(p.slug || p.title, p.id) === state.view.slug);
 }
 
 function redraw() {
   const scroll = window.scrollY;
 
   let html;
-  if (state.page.kind === 'post') {
+  if (state.view.kind === 'post') {
     const index = currentPostIndex();
     if (index === -1) {
-      say('This letter has been removed. Save, then go back to the home page.', 'bad');
-      return;
+      state.view = { kind: 'home' };
+      html = renderHome(state.content, BASE);
+    } else {
+      html = renderPost(state.content, index, BASE);
     }
-    html = renderPost(state.content, index);
   } else {
-    html = renderHome(state.content);
+    html = renderHome(state.content, BASE);
   }
 
   const doc = new DOMParser().parseFromString(html, 'text/html');
@@ -465,7 +519,9 @@ function redraw() {
       .forEach(img => { img.src = dataUrl; });
   });
 
-  document.body.classList.add('cw-editing');
+  document.body.classList.toggle('cw-editing', !state.preview);
+  document.body.classList.toggle('cw-preview', state.preview);
+  document.body.classList.toggle('post-page', state.view.kind === 'post');
   openLetters();
   wire();
   buildBar();
@@ -525,7 +581,9 @@ function onDownload() {
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
 
   const photos = Object.keys(file.uploads).length;
-  say(`Saved ${filename} to your downloads — ${humanSize(text.length)}${photos ? `, ${photos} new photo${photos > 1 ? 's' : ''}` : ''}. Send it to Attie and he will put it on the site.`, 'good');
+  say(`Saved ${filename} to your downloads — ${humanSize(text.length)}${photos ? `, ${photos} new photo${photos > 1 ? 's' : ''}` : ''}. `, 'good');
+  state.status.append(el('a', { class: 'cw-link', href: LETTERBOX, target: '_blank', rel: 'noopener' },
+    'Put it on the site →'));
 }
 
 /* ── start ──────────────────────────────────────────────────────────────── */
@@ -554,6 +612,7 @@ async function startEditing() {
 state.page = document.body.classList.contains('post-page')
   ? { kind: 'post', slug: location.pathname.replace(/\/(index\.html)?$/, '').split('/').pop() }
   : { kind: 'home' };
+state.view = state.page;
 
 addEventListener('beforeunload', e => {
   if (dirty()) { saveDraft(); e.preventDefault(); }

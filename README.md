@@ -53,36 +53,48 @@ comes back next time they open the page, and only **Start again** throws it away
 
 When they are happy, **Download changes** writes a single file —
 `crossworks-2026-08-27-vicki.json` — carrying the content and any photos they
-added. They send it however suits them: email, WhatsApp, a memory stick. Nothing
-in it is a secret. Nothing is live until Save is pressed,
+added. Nothing in it is a secret.
+
+Then **Put it on the site →**, the link that appears next to it, opens
+[the letterbox](https://github.com/attieretief/crossworks/upload/main/handover).
+They drag the file on and press **Commit changes**. That is the whole thing —
+a workflow reads the file, updates the site, rebuilds the pages and clears the
+letterbox again. The site changes a minute or two later. Nothing is live until Save is pressed,
 and **Discard** throws the session away.
 
 The editor is only downloaded when it is asked for — an ordinary visitor never
 loads a byte of it.
 
-## Putting a change live
+## Who may put a change live
 
-That is Attie's side, and it is one command:
+Only people with write access to this repository can drop a file in the
+letterbox, so **GitHub does the authenticating**. Vicki and Reynold each have
+their own free GitHub account and are invited as collaborators — a real login,
+with password reset and two-factor if they want it, and nothing for anyone here
+to issue, store or revoke by hand. Removing someone is removing them from the
+repository.
+
+Nothing in the site itself holds a credential. Someone who found the editor
+could rearrange the page in their own browser all day; without a GitHub account
+on this repository there is nowhere for it to go.
+
+The file still arrives from somebody else's laptop, so `import.mjs` reads it as
+untrusted: the content goes back through `shared/schema.mjs`, and only real
+photos at real `img/uploads/` paths are written. Anything refused is named in
+the workflow log rather than quietly dropped, and a file that fails to import
+publishes nothing.
+
+Every change is an ordinary commit, so it shows up in the repository's history
+and email notifications, and `git revert` undoes any of it.
+
+To put a change live by hand instead — or to try one before it is published:
 
 ```bash
 npm run import ~/Downloads/crossworks-2026-08-27-vicki.json
 ```
 
-It checks the file, writes the content and any photos into the repo, rebuilds
-the pages and shows what changed. Nothing is committed — look at the diff, then:
-
-```bash
-git add -A && git commit -m "Site edit by Vicki" && git push
-```
-
-The file arrives from someone else's laptop, so it is treated as untrusted: the
-content goes back through `shared/schema.mjs`, and only real photos at real
-`img/uploads/` paths are written. Anything refused is named on screen rather
-than quietly dropped.
-
-There is no account anywhere, nothing to expire, and nothing to revoke. Somebody
-who found the editor could rearrange the page in their own browser and hand you
-a file; the site only changes when you run the command.
+It does the same work locally and commits nothing, so you can look at the diff
+first.
 
 ## Layout
 
@@ -97,6 +109,8 @@ news/<name>/       one letter per directory, generated the same way
 shared/handover.mjs the file an editor downloads and Attie imports
 js/editor.js       the in-page editor (loaded on demand)
 import.mjs         npm run import <file> → content, photos, rebuild
-.github/workflows/build.yml
+handover/          the letterbox: a file dropped here publishes itself
+.github/workflows/build.yml      rebuilds when the content or templates change
+.github/workflows/handover.yml   imports whatever lands in the letterbox
 test.mjs           npm test
 ```

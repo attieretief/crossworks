@@ -1,0 +1,64 @@
+name: Publish a handover
+
+# Vicki and Reynold drop the file the editor gave them into handover/. Only
+# people with write access to this repository can do that, so GitHub does the
+# authenticating and there is no password or key anywhere in the site.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'handover/*.json'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-site
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Import whatever was dropped in
+        id: import
+        run: |
+          shopt -s nullglob
+          failed=0
+          names=""
+          for file in handover/*.json; do
+            echo "::group::$file"
+            if node import.mjs "$file"; then
+              names="$names $(basename "$file")"
+            else
+              echo "::error file=$file::That file could not be imported — nothing from it was published."
+              failed=1
+            fi
+            echo "::endgroup::"
+            # cleared either way, so a bad file does not sit in the letterbox
+            rm -f "$file"
+          done
+          echo "names=${names# }" >> "$GITHUB_OUTPUT"
+          exit $failed
+
+      - name: Publish
+        if: always()
+        run: |
+          git config user.name  "crossworks-build"
+          git config user.email "info@crossworksmissions.org"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "nothing to publish"
+            exit 0
+          fi
+          git commit -m "Site edit from ${{ steps.import.outputs.names || 'a handover file' }}"
+          git pull --rebase origin "${{ github.ref_name }}"
+          git push

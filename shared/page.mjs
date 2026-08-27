@@ -71,11 +71,11 @@ const scripts = base => `<div class="toast" id="toast">Copied</div>
 
 /* ── home page sections ─────────────────────────────────────────────────── */
 
-function projectCard(card, path) {
+function projectCard(card, path, base) {
   const wide = card.wide ? ' card-wide' : '';
   const funding = `\n          <p class="need${card.funding ? '' : ' is-empty'}"${card.funding ? '' : ' hidden'}>Funding required: <strong ${t(`${path}.funding`)}>${plain(card.funding)}</strong></p>`;
   return `      <article class="card${wide}" data-item="${esc(path)}" data-kind="project">
-        <img src="${esc(card.image)}" alt="${plain(card.alt)}" loading="lazy" ${t(`${path}.image`)} data-image>
+        <img src="${base}${esc(card.image)}" alt="${plain(card.alt)}" loading="lazy" ${t(`${path}.image`)} data-image>
         <div class="card-body">
           ${field(`${path}.title`, card.title, 'h3', '')}
           ${field(`${path}.body`, card.body, 'p', '', { rich: true })}${funding}
@@ -83,18 +83,18 @@ function projectCard(card, path) {
       </article>`;
 }
 
-function projectGroup(group, path) {
+function projectGroup(group, path, base) {
   return `    <p class="country" ${t(`${path}.country`)} data-item="${esc(path)}" data-kind="group">${plain(group.country)}</p>
     <div class="cards" data-list="${esc(path)}.items">
-${group.items.map((c, i) => projectCard(c, `${path}.items.${i}`)).join('\n')}
+${group.items.map((c, i) => projectCard(c, `${path}.items.${i}`, base)).join('\n')}
     </div>`;
 }
 
-function newsSection(c) {
+function newsSection(c, base) {
   const posts = c.news.posts;
   const cards = posts.map((post, i) => `      <article class="post-card" data-item="news.posts.${i}" data-kind="post">
-        <a class="post-link" href="${postUrl(post)}">
-          <img src="${esc(post.image)}" alt="${plain(post.alt)}" loading="lazy" ${t(`news.posts.${i}.image`)} data-image>
+        <a class="post-link" href="${base}${postUrl(post)}">
+          <img src="${base}${esc(post.image)}" alt="${plain(post.alt)}" loading="lazy" ${t(`news.posts.${i}.image`)} data-image>
           <div class="post-card-body">
             <p class="post-date" ${t(`news.posts.${i}.date`)}>${plain(post.date)}</p>
             <h3 ${t(`news.posts.${i}.title`)}>${plain(post.title)}</h3>
@@ -116,18 +116,18 @@ ${posts.length ? '' : `    <p class="posts-empty" ${t('news.emptyNote')}>${plain
 </section>`;
 }
 
-export function renderHome(c) {
+export function renderHome(c, base = '') {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
-${head({ title: c.meta.title, description: c.meta.description, image: c.hero.image, base: '' })}
+${head({ title: c.meta.title, description: c.meta.description, image: c.hero.image, base })}
 </head>
 <body>
 
-${header('')}
+${header(base)}
 
 <section class="hero">
-  <img class="hero-img" src="${esc(c.hero.image)}" alt="${plain(c.hero.alt)}" ${t('hero.image')} data-image>
+  <img class="hero-img" src="${base}${esc(c.hero.image)}" alt="${plain(c.hero.alt)}" ${t('hero.image')} data-image>
   <div class="hero-inner">
     <p class="overline" ${t('hero.overline')}>${plain(c.hero.overline)}</p>
     <h1 ${t('hero.title')} data-rich="1">${rich(c.hero.title)}</h1>
@@ -157,7 +157,7 @@ ${c.who.pillars.map((p, i) => `    <div class="pillar" data-item="who.pillars.${
     <h2 class="section-title" ${t('projects.title')}>${plain(c.projects.title)}</h2>
 
     <div data-list="projects.groups">
-${c.projects.groups.map((g, i) => projectGroup(g, `projects.groups.${i}`)).join('\n')}
+${c.projects.groups.map((g, i) => projectGroup(g, `projects.groups.${i}`, base)).join('\n')}
     </div>
   </div>
 </section>
@@ -167,12 +167,12 @@ ${c.projects.groups.map((g, i) => projectGroup(g, `projects.groups.${i}`)).join(
     <p class="overline dark" ${t('gallery.overline')}>${plain(c.gallery.overline)}</p>
     <h2 class="section-title dark" ${t('gallery.title')}>${plain(c.gallery.title)}</h2>
     <div class="grid-gallery" data-list="gallery.items">
-${c.gallery.items.map((g, i) => `      <img src="${esc(g.src)}" alt="${plain(g.alt)}" loading="lazy" data-item="gallery.items.${i}" data-kind="photo" ${t(`gallery.items.${i}.src`)} data-image>`).join('\n')}
+${c.gallery.items.map((g, i) => `      <img src="${base}${esc(g.src)}" alt="${plain(g.alt)}" loading="lazy" data-item="gallery.items.${i}" data-kind="photo" ${t(`gallery.items.${i}.src`)} data-image>`).join('\n')}
     </div>
   </div>
 </section>
 
-${newsSection(c)}
+${newsSection(c, base)}
 
 <section class="section section-gold" id="give">
   <div class="wrap narrow">
@@ -200,9 +200,9 @@ ${c.give.fields.map((fl, i) => `        <div><dt ${t(`give.fields.${i}.label`)}>
   </div>
 </section>
 
-${footer(c, '')}
+${footer(c, base)}
 
-${scripts('')}
+${scripts(base)}
 </body>
 </html>
 `;
@@ -210,9 +210,8 @@ ${scripts('')}
 
 /* ── a single post ──────────────────────────────────────────────────────── */
 
-export function renderPost(c, index) {
+export function renderPost(c, index, base = '../../') {
   const post = c.news.posts[index];
-  const base = '../../';
   const path = `news.posts.${index}`;
   const summary = plain(post.summary) || plain(post.title);
 
