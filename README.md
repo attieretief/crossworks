@@ -51,50 +51,41 @@ credential of any kind — everything happens in that browser. Work in progress 
 kept on their own computer, so a closed tab or a flat battery loses nothing: it
 comes back next time they open the page, and only **Start again** throws it away.
 
-When they are happy, **Download changes** writes a single file —
-`crossworks-2026-08-27-vicki.json` — carrying the content and any photos they
-added. Nothing in it is a secret.
+When they are happy, **Send to Attie** — one button, and the last thing they
+have to do. On a phone or an iPad it opens the ordinary share sheet with the
+file attached, so it goes out through WhatsApp or Mail exactly the way they
+share anything else. On a desktop browser without that, it saves the file to
+their downloads and tells them to attach it. Nothing in it is a secret.
 
-Then **Put it on the site →**, the link that appears next to it, opens
-[the letterbox](https://github.com/attieretief/crossworks/upload/main/handover).
-They drag the file on and press **Commit changes**. That is the whole thing —
-a workflow reads the file, updates the site, rebuilds the pages and clears the
-letterbox again. The site changes a minute or two later. Nothing is live until Save is pressed,
+They need no account, no password and no GitHub. The whole job is: change it,
+check it, send it. Nothing is live until Save is pressed,
 and **Discard** throws the session away.
 
 The editor is only downloaded when it is asked for — an ordinary visitor never
 loads a byte of it.
 
-## Who may put a change live
+## Putting it live
 
-Only people with write access to this repository can drop a file in the
-letterbox, so **GitHub does the authenticating**. Vicki and Reynold each have
-their own free GitHub account and are invited as collaborators — a real login,
-with password reset and two-factor if they want it, and nothing for anyone here
-to issue, store or revoke by hand. Removing someone is removing them from the
-repository.
+Attie's side, and it is one drag. Open
+[the letterbox](https://github.com/attieretief/crossworks/upload/main/handover),
+drop the file on, press **Commit changes**. That page works on a phone, so it is
+a thirty-second job from anywhere — no laptop, no terminal. A workflow imports
+the file, rebuilds the pages and clears the letterbox.
 
-Nothing in the site itself holds a credential. Someone who found the editor
-could rearrange the page in their own browser all day; without a GitHub account
-on this repository there is nowhere for it to go.
+On a Mac, `npm run import ~/Downloads/crossworks-….json` does the same work
+locally and commits nothing, so the diff can be looked at first.
 
-The file still arrives from somebody else's laptop, so `import.mjs` reads it as
-untrusted: the content goes back through `shared/schema.mjs`, and only real
-photos at real `img/uploads/` paths are written. Anything refused is named in
-the workflow log rather than quietly dropped, and a file that fails to import
-publishes nothing.
+**Nothing in the site holds a credential**, which is the point: the editor
+cannot publish, and neither can anyone who finds it. Publishing takes write
+access to this repository, and that is Attie.
 
-Every change is an ordinary commit, so it shows up in the repository's history
-and email notifications, and `git revert` undoes any of it.
+The file arrives from somebody else's laptop, so `import.mjs` reads it as
+untrusted — the content goes back through `shared/schema.mjs`, and only real
+photos at real `img/uploads/` paths are written. Anything refused is named
+rather than quietly dropped, and a file that fails to import publishes nothing.
 
-To put a change live by hand instead — or to try one before it is published:
-
-```bash
-npm run import ~/Downloads/crossworks-2026-08-27-vicki.json
-```
-
-It does the same work locally and commits nothing, so you can look at the diff
-first.
+Every change is an ordinary commit, so it lands in the history with a
+notification, and `git revert` undoes any of it.
 
 ## Layout
 

@@ -1,14 +1,18 @@
-# Drop a change here
+# The letterbox
 
-This folder is the letterbox. When Vicki or Reynold press **Download changes**
-in the site editor, they get a file called something like
-`crossworks-2026-08-27-vicki.json`. Dropping it in here is what puts it live:
+When Vicki or Reynold press **Send to Attie** in the site editor, they get a
+file called something like `crossworks-2026-08-27-vicki.json` and send it by
+WhatsApp or email. Dropping it in here is what puts it live:
 
 **[Upload a file →](https://github.com/attieretief/crossworks/upload/main/handover)**
 
-Drag the file onto that page and press **Commit changes**. A workflow reads it,
-updates the site, rebuilds the pages and clears the file away again. The site
-updates a minute or two later.
+Drag the file on and press **Commit changes**. That page works on a phone, so
+this is a thirty-second job from anywhere — no laptop and no terminal. A
+workflow reads the file, updates the site, rebuilds the pages and clears the
+letterbox. The site changes a minute or two later.
+
+`npm run import <file>` does the same thing on a Mac, without committing, if you
+would rather look at the diff first.
 
 Nothing else belongs in this folder. If a file is still sitting here, its import
 failed — the run under the repository's **Actions** tab says why.

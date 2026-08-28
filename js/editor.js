@@ -12,7 +12,7 @@ import { pack } from '../shared/handover.mjs';
 
 const BASE = window.CROSSWORKS_BASE || '';
 const DRAFT_KEY = 'cw.draft';
-const LETTERBOX = 'https://github.com/attieretief/crossworks/upload/main/handover';
+const SEND_TO = 'Attie';
 const MAX_UPLOAD_BYTES = 18 * 1024 * 1024;   /* one save's worth of photos, comfortably under GitHub's blob limit */
 const MAX_EDGE = 1600;                        /* photos are downscaled before they leave the browser */
 
@@ -76,8 +76,8 @@ function buildBar() {
   barShows = dirty();
   state.status = el('p', { class: 'cw-status' });
 
-  const download = button('Download changes', 'Write the file to send to Attie', onDownload, 'cw-primary');
-  download.disabled = !dirty();
+  const send = button(`Send to ${SEND_TO}`, 'Hand these changes over to be put on the site', onSend, 'cw-primary');
+  send.disabled = !dirty();
 
   const bar = el('div', { class: 'cw-bar', role: 'region', 'aria-label': 'Page editor' });
   bar.dataset.dirty = dirty() ? '1' : '';
@@ -86,7 +86,7 @@ function buildBar() {
     bar.append(
       el('span', { class: 'cw-title' }, 'Preview'),
       button('← Back to editing', 'Carry on making changes', () => setPreview(false), 'cw-primary'),
-      download,
+      send,
       state.status
     );
   } else {
@@ -98,7 +98,7 @@ function buildBar() {
         localStorage.removeItem(DRAFT_KEY);
         location.reload();
       }),
-      download,
+      send,
       button('✕', 'Close the editor', () => {
         if (dirty() && !confirm('Close the editor? Your changes stay saved on this computer.')) return;
         location.href = location.pathname;
@@ -562,16 +562,35 @@ const humanSize = bytes => bytes > 900_000
   ? `${(bytes / 1_000_000).toFixed(1)} MB`
   : `${Math.max(1, Math.round(bytes / 1000))} KB`;
 
-function onDownload() {
+/* On a phone or an iPad this hands the file to the share sheet, so it goes out
+   through WhatsApp or Mail the same way they share anything else. Where that is
+   not available it falls back to a download they can attach themselves. */
+async function onSend() {
   if (!dirty()) return say('Nothing has changed yet.');
 
-  const name = state.editor || prompt('Who should Attie thank for these changes?', '') || '';
-  state.editor = name.trim();
+  if (!state.editor) {
+    const asked = prompt(`Who shall I say these changes are from?`, '');
+    if (asked === null) return;
+    state.editor = asked.trim();
+  }
 
-  const file = pack({ content: state.content, uploads: state.uploads, editor: state.editor });
-  const text = JSON.stringify(file);
+  const doc = pack({ content: state.content, uploads: state.uploads, editor: state.editor });
+  const text = JSON.stringify(doc);
   const stamp = new Date().toISOString().slice(0, 10);
   const filename = `crossworks-${stamp}${state.editor ? '-' + slug(state.editor, 'edit') : ''}.json`;
+  const photos = Object.keys(doc.uploads).length;
+  const summary = `${humanSize(text.length)}${photos ? `, ${photos} new photo${photos > 1 ? 's' : ''}` : ''}`;
+
+  const file = new File([text], filename, { type: 'application/json' });
+  if (navigator.canShare?.({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], title: 'Changes to the Crossworks website' });
+      return say(`Sent — ${summary}. ${SEND_TO} will put it on the site.`, 'good');
+    } catch (err) {
+      if (err.name === 'AbortError') return;         /* they closed the share sheet */
+      /* anything else: fall through and give them the file instead */
+    }
+  }
 
   const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
   const link = el('a', { href: url, download: filename });
@@ -579,11 +598,7 @@ function onDownload() {
   link.click();
   link.remove();
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
-
-  const photos = Object.keys(file.uploads).length;
-  say(`Saved ${filename} to your downloads — ${humanSize(text.length)}${photos ? `, ${photos} new photo${photos > 1 ? 's' : ''}` : ''}. `, 'good');
-  state.status.append(el('a', { class: 'cw-link', href: LETTERBOX, target: '_blank', rel: 'noopener' },
-    'Put it on the site →'));
+  say(`Saved ${filename} to your downloads — ${summary}. Email or WhatsApp it to ${SEND_TO} and he will put it on the site.`, 'good');
 }
 
 /* ── start ──────────────────────────────────────────────────────────────── */
