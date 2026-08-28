@@ -1,0 +1,47 @@
+name: Build the site
+
+# content.json is written by the editor service; the templates are written by
+# hand. Either way the pages are rebuilt here, so index.html can never drift
+# from the content it came from.
+on:
+  push:
+    branches: [main]
+    paths:
+      - content.json
+      - shared/**
+      - build.mjs
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-site
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - run: node build.mjs
+
+      - name: Commit the rebuilt pages
+        run: |
+          git config user.name  "crossworks-build"
+          git config user.email "info@crossworksmissions.org"
+          git add -A index.html news
+          if git diff --cached --quiet; then
+            echo "nothing to rebuild"
+            exit 0
+          fi
+          git commit -m "Rebuild the site from content.json"
+          # an editor may have saved again while this ran
+          git pull --rebase origin "${{ github.ref_name }}"
+          git push

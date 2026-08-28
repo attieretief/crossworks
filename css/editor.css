@@ -1,0 +1,85 @@
+/* Loaded only when someone opens the editor (js/site.js). Nothing here reaches
+   an ordinary visitor. */
+
+body.cw-editing [data-reveal],body.cw-preview [data-reveal]{opacity:1 !important;transform:none !important}
+body.cw-editing,body.cw-preview{padding-bottom:96px}
+
+/* Preview: the page exactly as a visitor gets it. Every trace of the editor is
+   off, so what they are looking at is the real thing. */
+body.cw-preview .cw-tools,
+body.cw-preview .cw-add-row,
+body.cw-preview .cw-panel{display:none !important}
+body.cw-preview .cw-field,
+body.cw-preview .cw-img{outline:none !important;background:none !important;cursor:auto}
+body.cw-preview .posts.is-empty,
+body.cw-preview .need.is-empty{display:none}
+.cw-file{position:fixed;left:-9999px;width:1px;height:1px}
+
+/* the floater */
+.cw-bar{position:fixed;right:20px;bottom:20px;z-index:200;display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  max-width:min(560px,calc(100vw - 40px));padding:12px 14px;background:rgba(27,23,18,.97);color:#EDE7DD;
+  border:1px solid rgba(230,175,14,.45);box-shadow:0 24px 60px -24px rgba(0,0,0,.85);
+  font-family:"Quicksand",-apple-system,Segoe UI,sans-serif;font-size:14px}
+.cw-bar[data-dirty="1"]{border-color:var(--gold,#E6AF0E);box-shadow:0 0 0 1px rgba(230,175,14,.35),0 24px 60px -24px rgba(0,0,0,.85)}
+.cw-title{font-family:"Oswald",Impact,sans-serif;text-transform:uppercase;letter-spacing:.14em;font-size:12px;
+  color:#E6AF0E;margin-right:4px}
+.cw-signin{display:flex;gap:8px;align-items:center;margin:0}
+.cw-bar input{font:inherit;padding:8px 10px;border:1px solid rgba(237,231,221,.28);
+  background:rgba(255,255,255,.06);color:#fff;min-width:140px}
+.cw-bar input[type=password]{min-width:200px}
+.cw-bar input:focus{outline:2px solid #E6AF0E;outline-offset:-1px}
+.cw-btn{font:inherit;font-weight:600;padding:8px 12px;background:rgba(237,231,221,.1);color:#EDE7DD;
+  border:1px solid rgba(237,231,221,.22);cursor:pointer;transition:.15s}
+.cw-btn:hover:not(:disabled){background:rgba(237,231,221,.2);border-color:rgba(230,175,14,.6)}
+.cw-btn:disabled{opacity:.4;cursor:default}
+.cw-primary{background:#E6AF0E;color:#241F19;border-color:#E6AF0E}
+.cw-primary:hover:not(:disabled){background:#fff;border-color:#fff}
+.cw-danger:hover:not(:disabled){background:#A6301C;border-color:#A6301C;color:#fff}
+.cw-status{flex:1 0 100%;margin:2px 0 0;font-size:13px;color:#B7AC9B;min-height:1.1em}
+.cw-status.bad{color:#F2A08E}
+.cw-status.good{color:#B9E39B}
+.cw-link{color:#E6AF0E;font-weight:600;text-decoration:underline;text-underline-offset:3px;white-space:nowrap}
+.cw-link:hover{color:#fff}
+
+/* editable text */
+.cw-field{outline:1px dashed transparent;outline-offset:4px;transition:outline-color .15s ease;border-radius:2px}
+.cw-field:hover{outline-color:rgba(230,175,14,.55)}
+.cw-field:focus{outline:2px solid #E6AF0E;outline-offset:4px;background:rgba(230,175,14,.08)}
+
+/* editable images */
+.cw-img{cursor:pointer;outline:2px solid transparent;outline-offset:-2px;transition:outline-color .15s ease}
+.cw-img:hover{outline-color:#E6AF0E}
+
+/* per-item controls */
+.cw-item{position:relative}
+.cw-imgwrap{position:relative;margin:0;display:block}
+.cw-tools{position:absolute;top:8px;right:8px;z-index:12;display:flex;gap:4px;opacity:0;transition:opacity .15s ease}
+.cw-item:hover>.cw-tools,.cw-item:focus-within>.cw-tools,.cw-imgwrap:hover .cw-tools{opacity:1}
+.cw-tools .cw-btn{padding:5px 9px;font-size:13px;line-height:1;background:rgba(27,23,18,.92);
+  border-color:rgba(230,175,14,.5);color:#EDE7DD}
+.cw-tools .cw-wide{padding:5px 11px}
+p.cw-item>.cw-tools{top:-4px}
+
+/* add buttons */
+.cw-add-row{display:flex;justify-content:center;margin:22px 0 0}
+.cw-add{border-style:dashed;border-color:rgba(230,175,14,.6);background:transparent;color:#E6AF0E;padding:10px 20px}
+.section-light .cw-add,.section-gold .cw-add{color:#8a6b06;border-color:rgba(230,175,14,.9)}
+.cw-add:hover{background:rgba(230,175,14,.14)}
+
+/* blocks that only an editor can see */
+.cw-revealed{outline:1px dashed rgba(230,175,14,.5);outline-offset:6px}
+.posts.cw-revealed{display:grid}
+
+/* a letter's text, opened up under its card on the home page */
+.cw-panel{border-top:1px dashed rgba(230,175,14,.6);margin:0;padding:18px 24px 22px;background:rgba(230,175,14,.05)}
+.cw-panel-title{font-family:"Oswald",Impact,sans-serif;text-transform:uppercase;letter-spacing:.18em;
+  font-size:11px;color:#8a6b06;margin:0 0 10px}
+.cw-panel p[data-edit]{font-size:15px;color:#4b4339;margin:0 0 12px;line-height:1.6}
+.cw-panel p[data-edit]:empty::before{content:"Write here…";color:#a2988a}
+.cw-add-sm{padding:6px 14px;font-size:13px}
+.post-page .post-body p[data-edit]:empty::before{content:"Write here…";color:#a2988a}
+
+@media (max-width:640px){
+  .cw-bar{left:12px;right:12px;bottom:12px}
+  .cw-tools{opacity:1}
+}

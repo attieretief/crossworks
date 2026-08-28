@@ -1,0 +1,237 @@
+{
+  "meta": {
+    "title": "Crossworks — Across cultures, across borders",
+    "description": "Crossworks is a South African public benefit organisation raising and distributing funds to communities in forgotten areas across Africa — water, health, agriculture and discipleship.",
+    "ogDescription": "Across cultures, across borders — promoting the Kingdom of God and the healing it contains."
+  },
+  "hero": {
+    "image": "img/hero.jpg",
+    "alt": "A child at a Crossworks borehole in western Zambia",
+    "overline": "Public benefit organisation · Section 18A registered",
+    "title": "Across cultures,<br>across borders",
+    "lead": "Crossworks raises and distributes funds to communities in forgotten areas, and equips them with the agricultural, health and religious knowledge and resources we and our partners are able to provide.",
+    "verse": "“The place God calls you to is the place where your deep gladness<br>and the world’s deep hunger meet.” — Frederick Buechner",
+    "primaryCta": "Give today",
+    "secondaryCta": "Our projects"
+  },
+  "who": {
+    "overline": "Who are we",
+    "title": "Promoting the Kingdom<br>and the healing it contains",
+    "body": "Crossworks is a public benefit organisation that focuses on raising and distributing funds for and to communities in forgotten areas. We equip these communities with agricultural, health and religious knowledge and resources that we, and our partners, are able to provide. We work across cultures, across borders and across social boundaries to promote the Kingdom of God and the healing it contains.",
+    "pillars": [
+      {
+        "id": "p-water",
+        "title": "Water &amp; livelihood",
+        "body": "Boreholes, ox carts, seed and vegetable gardens that enable a community to carry itself."
+      },
+      {
+        "id": "p-health",
+        "title": "Health",
+        "body": "Supporting a remote clinic with equipment, medication and medical expertise."
+      },
+      {
+        "id": "p-disciple",
+        "title": "Discipleship",
+        "body": "Supporting missionaries, training youth leaders, and putting Scripture in their hands."
+      }
+    ]
+  },
+  "projects": {
+    "overline": "What we do",
+    "title": "Our projects",
+    "groups": [
+      {
+        "id": "g-sa",
+        "country": "South Africa",
+        "items": [
+          {
+            "id": "pr-kraaifontein",
+            "title": "Kraaifontein Community Centre",
+            "image": "img/kraaifontein/kraaifontein-4.jpg",
+            "alt": "Shipping containers being placed for the Kraaifontein community centre",
+            "body": "In Kraaifontein, Cape Town, we support a local community with the practical means to develop and empower themselves — including containers used for community events, church, Bible study and soup kitchens. We also assist with a vegetable garden and contribute to basic needs such as housing, clothing and meals as needed.",
+            "funding": "R200 000",
+            "wide": false
+          },
+          {
+            "id": "pr-reach4life",
+            "title": "Youth Discipleship — Reach4Life",
+            "image": "img/reach4life/reach4life-1.jpg",
+            "alt": "Learners holding Reach4Life Bibles",
+            "body": "In partnership with Biblica we train youth leaders in youth discipleship and provide the material in the form of the Biblica Reach4Life Bible. The programme currently runs at Boy Muller Primary in the Kouebokkeveld and Jakes Gerwel Technical School in Bonnievale.",
+            "funding": "",
+            "wide": false
+          }
+        ]
+      },
+      {
+        "id": "g-zam",
+        "country": "Zambia &amp; Angola",
+        "items": [
+          {
+            "id": "pr-boreholes",
+            "title": "Boreholes",
+            "image": "img/boreholes/boreholes-1.jpg",
+            "alt": "A completed borehole under a thatched shelter",
+            "body": "Many communities in Zambia and eastern Angola still have limited access to fresh water. Some dig holes to reach underground water; others walk long distances to fetch water daily. In co-operation with our fellow-labourers at Waymakers Missions we identify the communities with the greatest need and co-ordinate the sinking of boreholes together with the local community and donors.",
+            "funding": "",
+            "wide": false
+          },
+          {
+            "id": "pr-oxcarts",
+            "title": "Ox carts",
+            "image": "img/boreholes/boreholes-16.jpg",
+            "alt": "A family with their ox cart on the Zambezi flood plains",
+            "body": "The flood plains on the banks of the Zambezi in western Zambia lie under shallow water for many months of the year, and the area is then unreachable by vehicle. We donate oxen and ox carts to pastors and leaders so they can take their agricultural wares to market, sustain their families, and continue their work in God’s Kingdom.",
+            "funding": "",
+            "wide": false
+          }
+        ]
+      },
+      {
+        "id": "g-ang",
+        "country": "Angola",
+        "items": [
+          {
+            "id": "pr-chilombo",
+            "title": "Chilombo Clinic &amp; Mission Base",
+            "image": "img/chilombo/chilombo-3.jpg",
+            "alt": "The Chilombo mission clinic in eastern Angola",
+            "body": "In eastern Angola one finds the Luvale people — a forgotten tribe in one of the most remote parts of Africa. Masaha Matondo, a Zambian missionary, serves here, where a basic obstetric clinic, a church and a mission base have been established. We support the clinic with equipment, medication and medical expertise, provide seed for vegetable gardens, support the youth discipleship programme, and contribute toward the mission base gaining ownership of its land. In 2027, by God’s grace, we hope to take a team of South African doctors on an outreach to this clinic.",
+            "funding": "R1,5 million",
+            "wide": true
+          }
+        ]
+      }
+    ]
+  },
+  "gallery": {
+    "overline": "From the field",
+    "title": "Gallery",
+    "items": [
+      {
+        "id": "gal-1",
+        "src": "img/boreholes/boreholes-12.jpg",
+        "alt": "Water tanker delivering to a village"
+      },
+      {
+        "id": "gal-2",
+        "src": "img/boreholes/boreholes-17.jpg",
+        "alt": "An ox cart on the road in western Zambia"
+      },
+      {
+        "id": "gal-3",
+        "src": "img/boreholes/boreholes-3.jpg",
+        "alt": "Borehole project"
+      },
+      {
+        "id": "gal-4",
+        "src": "img/boreholes/boreholes-9.jpg",
+        "alt": "Borehole project"
+      },
+      {
+        "id": "gal-5",
+        "src": "img/boreholes/boreholes-13.jpg",
+        "alt": "Borehole project"
+      },
+      {
+        "id": "gal-6",
+        "src": "img/chilombo/chilombo-1.jpg",
+        "alt": "Staff at the Chilombo clinic"
+      },
+      {
+        "id": "gal-7",
+        "src": "img/chilombo/chilombo-4.jpg",
+        "alt": "Chilombo clinic"
+      },
+      {
+        "id": "gal-8",
+        "src": "img/kraaifontein/kraaifontein-1.jpg",
+        "alt": "Kraaifontein community work"
+      },
+      {
+        "id": "gal-9",
+        "src": "img/kraaifontein/kraaifontein-6.jpg",
+        "alt": "Kraaifontein community work"
+      },
+      {
+        "id": "gal-10",
+        "src": "img/reach4life/reach4life-3.jpg",
+        "alt": "Reach4Life youth discipleship"
+      },
+      {
+        "id": "gal-11",
+        "src": "img/reach4life/reach4life-5.jpg",
+        "alt": "Reach4Life youth discipleship"
+      },
+      {
+        "id": "gal-12",
+        "src": "img/boreholes/boreholes-10.jpg",
+        "alt": "Borehole project"
+      }
+    ]
+  },
+  "news": {
+    "overline": "From the field",
+    "title": "News",
+    "blurb": "Letters from the work — what your giving has done, and where it is going next.",
+    "emptyNote": "The first letter is on its way.",
+    "posts": []
+  },
+  "give": {
+    "overline": "Partner with us",
+    "title": "Give to the mission",
+    "body": "Your gift sinks a borehole, seeds a garden, keeps a clinic open and puts the Word of God in the hands of people who have never held it. Crossworks is Section 18A registered, so gifts towards our South African projects are tax deductible — a Section 18A certificate can only be issued for projects inside South Africa.",
+    "bankTitle": "Direct EFT · South Africa",
+    "bankHint": "Tap any field to copy",
+    "fields": [
+      {
+        "id": "bk-name",
+        "label": "Account name",
+        "value": "Crossworks Trust",
+        "copy": true
+      },
+      {
+        "id": "bk-bank",
+        "label": "Bank",
+        "value": "FNB — Business Account",
+        "copy": true
+      },
+      {
+        "id": "bk-acc",
+        "label": "Account number",
+        "value": "63058118556",
+        "copy": true
+      },
+      {
+        "id": "bk-branch",
+        "label": "Branch code",
+        "value": "200610",
+        "copy": true
+      },
+      {
+        "id": "bk-swift",
+        "label": "SWIFT code",
+        "value": "FIRNZAJJ",
+        "copy": true
+      },
+      {
+        "id": "bk-ref",
+        "label": "Reference",
+        "value": "Your name + project",
+        "copy": false
+      }
+    ],
+    "footNote": "For a Section 18A tax certificate, email your deposit reference and details to <a href=\"mailto:info@crossworksmissions.org\">info@crossworksmissions.org</a>."
+  },
+  "contact": {
+    "overline": "Get in touch",
+    "title": "Contact us",
+    "label": "Email us",
+    "email": "info@crossworksmissions.org",
+    "verse": "“Teach me your way, Lord, that I may rely on your faithfulness;<br>give me an undivided heart, that I may fear your name.” — Psalm 86:11"
+  },
+  "footer": {
+    "line": "Crossworks Trust · Public Benefit Organisation · Section 18A registered"
+  }
+}

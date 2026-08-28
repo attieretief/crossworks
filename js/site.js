@@ -69,3 +69,31 @@ if (!reduced && 'IntersectionObserver' in window) {
     seen.forEach(el => el.classList.add('in'));
   }, 2500);
 }
+
+/* ── editor ─────────────────────────────────────────────────────────────── */
+/* Loaded on demand only: ?edit in the URL, or Ctrl/Cmd + Shift + E. Visitors
+   never download a byte of it. */
+(() => {
+  let loading = false;
+  const openEditor = () => {
+    if (loading) return;
+    loading = true;
+    const base = window.CROSSWORKS_BASE || '';
+    const css = document.createElement('link');
+    css.rel = 'stylesheet';
+    css.href = base + 'css/editor.css';
+    document.head.appendChild(css);
+    const js = document.createElement('script');
+    js.src = base + 'js/editor.js';
+    js.type = 'module';
+    document.body.appendChild(js);
+  };
+
+  if (/[?&]edit\b/.test(location.search) || location.hash === '#edit') openEditor();
+  addEventListener('keydown', e => {
+    if (e.shiftKey && (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'e') {
+      e.preventDefault();
+      openEditor();
+    }
+  });
+})();
