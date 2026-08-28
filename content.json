@@ -10,19 +10,19 @@
     "overline": "Public benefit organisation · Section 18A registered",
     "title": "Across cultures,<br>across borders",
     "lead": "Crossworks raises and distributes funds to communities in forgotten areas, and equips them with the agricultural, health and religious knowledge and resources we and our partners are able to provide.",
-    "verse": "“The place God calls you to is the place where your deep gladness<br>and the world’s deep hunger meet.”",
+    "verse": "“The place God calls you to is the place where your deep gladness<br>and the world’s deep hunger meet.” — Frederick Buechner",
     "primaryCta": "Give today",
     "secondaryCta": "Our projects"
   },
   "who": {
     "overline": "Who are we",
     "title": "Promoting the Kingdom<br>and the healing it contains",
-    "body": "Crossworks is a public benefit organisation that focuses on raising and distributing funds for and to communities in forgotten areas, as well as on equipping these communities with agricultural, health and religious knowledge and resources that we, and our partners, are able to provide. We work across cultures, across borders and across social boundaries to promote the Kingdom of God and the healing it contains.",
+    "body": "Crossworks is a public benefit organisation that focuses on raising and distributing funds for and to communities in forgotten areas. We equip these communities with agricultural, health and religious knowledge and resources that we, and our partners, are able to provide. We work across cultures, across borders and across social boundaries to promote the Kingdom of God and the healing it contains.",
     "pillars": [
       {
         "id": "p-water",
         "title": "Water &amp; livelihood",
-        "body": "Boreholes, ox carts, seed and vegetable gardens that let a community carry itself."
+        "body": "Boreholes, ox carts, seed and vegetable gardens that enable a community to carry itself."
       },
       {
         "id": "p-health",
@@ -32,7 +32,7 @@
       {
         "id": "p-disciple",
         "title": "Discipleship",
-        "body": "Training youth leaders and missionaries, and putting Scripture in their hands."
+        "body": "Supporting missionaries, training youth leaders, and putting Scripture in their hands."
       }
     ]
   },
@@ -73,7 +73,7 @@
             "title": "Boreholes",
             "image": "img/boreholes/boreholes-1.jpg",
             "alt": "A completed borehole under a thatched shelter",
-            "body": "Many communities in Zambia and eastern Angola still have limited access to fresh water. Some dig holes to reach underground water; others walk long distances to fetch water daily. We identify the communities with the greatest need and co-ordinate the sinking of boreholes together with the local community and donors.",
+            "body": "Many communities in Zambia and eastern Angola still have limited access to fresh water. Some dig holes to reach underground water; others walk long distances to fetch water daily. In co-operation with our fellow-labourers at Waymakers Missions we identify the communities with the greatest need and co-ordinate the sinking of boreholes together with the local community and donors.",
             "funding": "",
             "wide": false
           },
@@ -97,7 +97,7 @@
             "title": "Chilombo Clinic &amp; Mission Base",
             "image": "img/chilombo/chilombo-3.jpg",
             "alt": "The Chilombo mission clinic in eastern Angola",
-            "body": "In eastern Angola one finds the Luvale people — a forgotten tribe in one of the most remote parts of Africa. Masaha Matondo, a Zambian missionary, serves here, where a basic obstetric clinic, a church and a mission base have been established. We support the clinic with equipment, medication and medical expertise, provide seed for vegetable gardens, support the youth discipleship programme, and contribute toward the mission base gaining ownership of its land. In 2027, by God’s grace, we hope to take a team of South African doctors to this clinic.",
+            "body": "In eastern Angola one finds the Luvale people — a forgotten tribe in one of the most remote parts of Africa. Masaha Matondo, a Zambian missionary, serves here, where a basic obstetric clinic, a church and a mission base have been established. We support the clinic with equipment, medication and medical expertise, provide seed for vegetable gardens, support the youth discipleship programme, and contribute toward the mission base gaining ownership of its land. In 2027, by God’s grace, we hope to take a team of South African doctors on an outreach to this clinic.",
             "funding": "R1,5 million",
             "wide": true
           }
