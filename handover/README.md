@@ -1,6 +1,6 @@
 # The letterbox
 
-When Vicki or Reynold press **Send to Attie** in the site editor, they get a
+When Vicki or Reynold press **Send for publishing** in the site editor, they get a
 file called something like `crossworks-2026-08-27-vicki.json` and send it by
 WhatsApp or email. Dropping it in here is what puts it live:
 

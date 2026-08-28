@@ -12,7 +12,8 @@ import { pack } from '../shared/handover.mjs';
 
 const BASE = window.CROSSWORKS_BASE || '';
 const DRAFT_KEY = 'cw.draft';
-const SEND_TO = 'Attie';
+/* Named only where the fallback has to tell them who to attach the file to. */
+const PUBLISHER = 'Attie';
 const MAX_UPLOAD_BYTES = 18 * 1024 * 1024;   /* one save's worth of photos, comfortably under GitHub's blob limit */
 const MAX_EDGE = 1600;                        /* photos are downscaled before they leave the browser */
 
@@ -76,7 +77,7 @@ function buildBar() {
   barShows = dirty();
   state.status = el('p', { class: 'cw-status' });
 
-  const send = button(`Send to ${SEND_TO}`, 'Hand these changes over to be put on the site', onSend, 'cw-primary');
+  const send = button('Send for publishing', 'Hand these changes over to be put on the site', onSend, 'cw-primary');
   send.disabled = !dirty();
 
   const bar = el('div', { class: 'cw-bar', role: 'region', 'aria-label': 'Page editor' });
@@ -585,7 +586,7 @@ async function onSend() {
   if (navigator.canShare?.({ files: [file] })) {
     try {
       await navigator.share({ files: [file], title: 'Changes to the Crossworks website' });
-      return say(`Sent — ${summary}. ${SEND_TO} will put it on the site.`, 'good');
+      return say(`Sent — ${summary}. It goes on the site once ${PUBLISHER} has had a look.`, 'good');
     } catch (err) {
       if (err.name === 'AbortError') return;         /* they closed the share sheet */
       /* anything else: fall through and give them the file instead */
@@ -598,7 +599,7 @@ async function onSend() {
   link.click();
   link.remove();
   setTimeout(() => URL.revokeObjectURL(url), 10_000);
-  say(`Saved ${filename} to your downloads — ${summary}. Email or WhatsApp it to ${SEND_TO} and he will put it on the site.`, 'good');
+  say(`Saved ${filename} to your downloads — ${summary}. Email or WhatsApp it to ${PUBLISHER} and he will put it on the site.`, 'good');
 }
 
 /* ── start ──────────────────────────────────────────────────────────────── */

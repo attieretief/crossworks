@@ -51,8 +51,8 @@ credential of any kind — everything happens in that browser. Work in progress 
 kept on their own computer, so a closed tab or a flat battery loses nothing: it
 comes back next time they open the page, and only **Start again** throws it away.
 
-When they are happy, **Send to Attie** — one button, and the last thing they
-have to do. On a phone or an iPad it opens the ordinary share sheet with the
+When they are happy, **Send for publishing** — one button, and the last thing
+they have to do. On a phone or an iPad it opens the ordinary share sheet with the
 file attached, so it goes out through WhatsApp or Mail exactly the way they
 share anything else. On a desktop browser without that, it saves the file to
 their downloads and tells them to attach it. Nothing in it is a secret.
