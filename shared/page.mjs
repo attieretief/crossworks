@@ -179,6 +179,10 @@ ${newsSection(c, base)}
     <p class="overline dark" ${t('give.overline')}>${plain(c.give.overline)}</p>
     <h2 class="section-title dark" ${t('give.title')}>${plain(c.give.title)}</h2>
     <p class="body-lg center" ${t('give.body')} data-rich="1">${rich(c.give.body)}</p>
+    <div class="pay">
+      <p class="bank-title"><span ${t('give.card.title')}>${plain(c.give.card.title)}</span> <span ${t('give.card.hint')}>${plain(c.give.card.hint)}</span></p>
+      <a class="btn btn-gold" href="${esc(c.give.card.url)}" target="_blank" rel="noopener noreferrer" ${t('give.card.cta')}>${plain(c.give.card.cta)}</a>
+    </div>
     <div class="bank">
       <p class="bank-title"><span ${t('give.bankTitle')}>${plain(c.give.bankTitle)}</span> <span ${t('give.bankHint')}>${plain(c.give.bankHint)}</span></p>
       <dl>

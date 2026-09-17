@@ -182,6 +182,12 @@
     "overline": "Partner with us",
     "title": "Give to the mission",
     "body": "Your gift sinks a borehole, seeds a garden, keeps a clinic open and puts the Word of God in the hands of people who have never held it. Crossworks is Section 18A registered, so gifts towards our South African projects are tax deductible — a Section 18A certificate can only be issued for projects inside South Africa.",
+    "card": {
+      "title": "Card payment",
+      "hint": "Visa & Mastercard, secured by Yoco",
+      "cta": "Give by card",
+      "url": "https://pay.yoco.com/crossworks"
+    },
     "bankTitle": "Direct EFT · South Africa",
     "bankHint": "Tap any field to copy",
     "fields": [

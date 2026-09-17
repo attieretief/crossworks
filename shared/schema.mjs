@@ -21,6 +21,15 @@ function asset(v, fallback) {
   return PATH_OK.test(s) && NO_TRAVERSAL(s) ? s : fallback;
 }
 
+/** Only an https link, and only the characters a URL is allowed to carry —
+    an editor's browser must never be able to point a payment button elsewhere
+    odd, or slip javascript: past the template. */
+function link(v, fallback) {
+  const s = String(v ?? '').trim();
+  return /^https:\/\/[A-Za-z0-9.-]+[A-Za-z0-9/._~:?#\[\]@!$&'()*+,;=%-]*$/.test(s) && s.length <= 200
+    ? s : fallback;
+}
+
 const list = (v, max, fn) => (Array.isArray(v) ? v : []).slice(0, max).map(fn);
 
 const id = (v, prefix, i) => {
@@ -122,6 +131,12 @@ export function clean(input) {
       overline: str(give.overline, LIMITS.short),
       title: str(give.title, LIMITS.short),
       body: html(give.body, LIMITS.long),
+      card: {
+        title: str(give.card?.title, 60),
+        hint: str(give.card?.hint, 80),
+        cta: str(give.card?.cta, 40),
+        url: link(give.card?.url, 'https://pay.yoco.com/crossworks')
+      },
       bankTitle: str(give.bankTitle, LIMITS.short),
       bankHint: str(give.bankHint, LIMITS.short),
       fields: list(give.fields, 10, (f, i) => ({

@@ -134,6 +134,12 @@ h2{font-size:clamp(30px,4.4vw,50px)}
 .post-back a:hover{color:var(--ink)}
 
 /* give */
+.pay{background:#fff;border:1px solid rgba(103,93,80,.18);padding:32px;margin-top:44px;
+  box-shadow:0 18px 40px -30px rgba(36,31,25,.5)}
+.pay .btn{display:block;text-align:center;padding:16px 30px}
+/* on the white card the plain gold hover would turn the button invisible */
+.pay .btn-gold:hover{background:var(--gold-dark);color:#fff}
+.pay+.bank{margin-top:20px}
 .bank{background:#fff;border:1px solid rgba(103,93,80,.18);padding:32px;margin-top:44px;box-shadow:0 18px 40px -30px rgba(36,31,25,.5)}
 .bank-title{font-family:var(--head);text-transform:uppercase;letter-spacing:.16em;font-size:13px;color:var(--brown);
   margin:0 0 20px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
