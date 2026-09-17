@@ -136,7 +136,9 @@ h2{font-size:clamp(30px,4.4vw,50px)}
 /* give */
 .pay{background:#fff;border:1px solid rgba(103,93,80,.18);padding:32px;margin-top:44px;
   box-shadow:0 18px 40px -30px rgba(36,31,25,.5)}
-.pay .btn{display:block;text-align:center;padding:16px 30px}
+.pay .btn{display:flex;align-items:center;justify-content:center;gap:14px;text-align:center;padding:14px 30px}
+.pay .yoco{background:#fff;border-radius:999px;padding:4px 11px;display:inline-flex;line-height:0}
+.pay .yoco img{display:block;width:44px;height:auto}
 /* on the white card the plain gold hover would turn the button invisible */
 .pay .btn-gold:hover{background:var(--gold-dark);color:#fff}
 .pay+.bank{margin-top:20px}

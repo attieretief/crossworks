@@ -181,7 +181,10 @@ ${newsSection(c, base)}
     <p class="body-lg center" ${t('give.body')} data-rich="1">${rich(c.give.body)}</p>
     <div class="pay">
       <p class="bank-title"><span ${t('give.card.title')}>${plain(c.give.card.title)}</span> <span ${t('give.card.hint')}>${plain(c.give.card.hint)}</span></p>
-      <a class="btn btn-gold" href="${esc(c.give.card.url)}" target="_blank" rel="noopener noreferrer" ${t('give.card.cta')}>${plain(c.give.card.cta)}</a>
+      <a class="btn btn-gold pay-btn" href="${esc(c.give.card.url)}" target="_blank" rel="noopener noreferrer">
+        <span ${t('give.card.cta')}>${plain(c.give.card.cta)}</span>
+        <span class="yoco"><img src="${base}img/yoco.svg" alt="Yoco" width="44" height="17"></span>
+      </a>
     </div>
     <div class="bank">
       <p class="bank-title"><span ${t('give.bankTitle')}>${plain(c.give.bankTitle)}</span> <span ${t('give.bankHint')}>${plain(c.give.bankHint)}</span></p>
